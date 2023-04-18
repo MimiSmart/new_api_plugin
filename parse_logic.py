@@ -30,6 +30,10 @@ class Logic:
             item = item[key]
         return json.dumps(item, ensure_ascii=False)
 
+    def get_json(self):
+        self.get_dict()  # временно, пока нет отслеживания изменений логики
+        return self.obj_logic
+
     def write(self):
         with open('new_logic.xml', 'wb') as f:
             # костыль что бы вернуть <?xml version="1.0" encoding="UTF-8"?> в исходном виде
