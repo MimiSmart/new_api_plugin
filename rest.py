@@ -1,9 +1,9 @@
 # app.py
 from flask import Flask, request
 
-from parse_logic import Logic
+from logic import Logic
 
-logic = Logic()
+logic : Logic = None
 
 app = Flask(__name__)
 
@@ -18,12 +18,10 @@ def get_item():
     if request.is_json:
         req_json = request.get_json()
         return logic.get_item(req_json['addr'])
-        # country["id"] = _find_next_id()
-        # countries.append(country)
-        # return country, 201
     return {"error": "Request must be JSON"}, 415
 
 
-def run():
-    global app
-    app.run(port=5000)
+def run(port, _logic: Logic):
+    global app, logic
+    logic = _logic
+    app.run(port=port)

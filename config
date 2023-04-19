@@ -1,0 +1,7 @@
+{
+    "websocket_port": 8000,
+    "rest_port": 5000,
+    "logic_path": "/home/sh2/logic.xml",
+    "logic_path_debug": "logic.xml"
+}
+

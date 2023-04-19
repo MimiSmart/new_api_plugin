@@ -10,7 +10,7 @@ class Logic:
     obj_logic = None
 
     def get_xml(self):
-        with open('logic.xml', 'rb') as f:
+        with open(self.path_logic, 'rb') as f:
             self._header = f.readline()
             self.xml_logic = f.read()
         return self._header + self.xml_logic
@@ -35,7 +35,7 @@ class Logic:
         return self.obj_logic
 
     def write(self):
-        with open('new_logic.xml', 'wb') as f:
+        with open(self.path_logic, 'wb') as f:
             # костыль что бы вернуть <?xml version="1.0" encoding="UTF-8"?> в исходном виде
             # без него было бы
             # f.write(prettify(dict_to_etree(Dict)).encode('utf-8'))

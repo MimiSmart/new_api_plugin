@@ -3,9 +3,9 @@ import json
 
 import websockets
 
-from parse_logic import Logic
+from logic import Logic
 
-logic = Logic()
+logic : Logic = None
 
 def test():
     return {
@@ -51,8 +51,10 @@ async def handler(websocket, path):
     await websocket.send(reply)
 
 
-def run():
-    start_server = websockets.serve(handler, "localhost", 8000)
+def run(port, _logic : Logic):
+    global logic
+    logic = _logic
+    start_server = websockets.serve(handler, "localhost", port)
     ws_loop = asyncio.get_event_loop()
 
     ws_loop.run_until_complete(start_server)
