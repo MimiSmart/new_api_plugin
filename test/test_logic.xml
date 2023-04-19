@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<smart-house edit-mode-users="User1" srv-ver="2">
+	<area name="Setup9">
+		<item addr="588:8" cfgid="40" name="Temperature" type="temperature-sensor"/>
+		<item addr="588:16" cfgid="12" name="IR transmitter" type="ir-transmitter"/>
+		<item addr="588:24" cfgid="6" name="Methane" type="humidity-sensor"/>
+		<item addr="588:31" cfgid="6" name="Voltage 1" system="yes" type="voltage-sensor"/>
+		<item addr="588:32" cfgid="6" name="Humidity" type="humidity-sensor"/>
+		<item addr="588:39" cfgid="6" name="Voltage 2" system="yes" type="voltage-sensor"/>
+		<item addr="588:40" cfgid="6" name="Motion" type="motion-sensor"/>
+		<item addr="588:47" cfgid="6" name="Voltage 3" system="yes" type="voltage-sensor"/>
+		<item addr="588:48" cfgid="6" name="Illumination" type="illumination-sensor"/>
+		<item addr="588:55" cfgid="6" name="Voltage 4" system="yes" type="voltage-sensor"/>
+		<item addr="588:56" cfgid="5" name="Switch" type="switch"/>
+		<item addr="588:57" cfgid="5" name="Switch" type="switch"/>
+		<item addr="588:58" cfgid="5" name="Switch" type="switch"/>
+		<item addr="588:59" cfgid="5" name="Door" text="Пожар;Норм" type="door-sensor"/>
+		<item addr="588:60" cfgid="5" name="Door" type="door-sensor"/>
+		<item addr="588:61" cfgid="5" name="Door" type="door-sensor"/>
+		<item addr="588:63" cfgid="5" hw="BBBKHK" name="Voltage 5" system="yes" type="voltage-sensor"/>
+		<item addr="588:70" cfgid="10" name="Temperature" system="yes" type="temperature-sensor"/>
+		<item addr="588:71" cfgid="10" hw="G" name="Voltage 6" system="yes" type="voltage-sensor"/>
+		<item addr="588:98" logic-ver="15" name="Temperature" system="yes" type="temperature-sensor"/>
+		<item addr="789:1" auto-period="600" cfgid="17" name="Lamp 1" type="lamp">
+			<automation enabled="yes" illumination-level="20" illumination-sensors="588:48" time-interval="120" type="off-by-illumination"/>
+		</item>
+		<item addr="789:2" auto-period="600" cfgid="17" name="Lamp 2" type="lamp"/>
+		<item addr="789:3" auto-period="600" cfgid="17" name="Lamp 3" type="lamp"/>
+		<item addr="789:4" auto-period="600" cfgid="17" name="Lamp 4" type="lamp"/>
+		<item addr="789:5" auto-period="600" cfgid="17" name="Lamp 5" type="lamp"/>
+		<item addr="789:6" auto-period="600" cfgid="17" name="Lamp 6" sub-type="socket" type="lamp"/>
+		<item addr="789:97" cfgid="17" name="Temperature" system="yes" type="temperature-sensor"/>
+		<item addr="789:98" cfgid="17" logic-ver="17" name="Temperature" sn="358595608" system="yes" type="temperature-sensor"/>
+		<item addr="104:21" cfgid="15" name="IR receiver" type="ir-receiver"/>
+		<item addr="104:98" cfgid="15" name="Temperature" system="yes" type="temperature-sensor"/>
+		<renderer-enabled udn="*"/>
+		<item addr="524:20" cfgid="13" hw="co2" name="CO2" type="co2-sensor"/>
+		<item addr="524:98" cfgid="13" hw="CO2" logic-ver="15" name="Temperature" system="yes" type="temperature-sensor"/>
+	</area>
+	<area name="1-й этаж">
+		<area name="Гостиная">
+			<item addr="588:240" cam="2048:2" name="Весь свет" password="12345" type="light-scheme">
+				<contains addr="789:1" state="1"/>
+				<contains addr="789:3" state="1"/>
+				<linked addr="585:10"/>
+			</item>
+			<item addr="588:200" favorite="yes" funs="0x0F" modes="0x1A" name="Кондиционер" t-delta="10" t-min="19" type="conditioner" vane-hor="0x7F" vane-ver="0x7E" widget="yes"/>
+			<item addr="789:8" automation="Auto" automation-stored="Auto" cfgid="17" name="Радиатор" temperature-lag="0.2" temperature-sensors="588:8" type="valve-heating" widget="yes">
+				<automation name="Auto" temperature-level="30"/>
+			</item>
+			<item addr="789:7" cfgid="17" name="Вода" type="valve"/>
+			<item U00="789:1" U01="789:2" addr="588:250" name="Автоматизация" path="scripts/AUTO.txt" type="script"/>
+			<import-script JALOUSIE="588:249" NAME="Шторы" TIME="10" id="588" name="Шторы" path="scripts/virtualJalousie (2).txt"/>
+			<item addr="588:249" cam="2048:1" length="1" name="Шторы" sub-type="jalousie120" type="virtual" widget="yes"/>
+			<item addr="588:64" cfgid="10" name="Ворота" sub-type="120" type="gate"/>
+			<import-script JALOUSIE="588:248" NAME="Шторка 2" TIME="5" id="588" name="Шторка 2" path="scripts/virtualJalousie (2).txt"/>
+			<item addr="588:248" length="1" name="Шторка 2" sub-type="jalousie120" type="virtual"/>
+			<item addr="2048:1" auto-play="false" bottom-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=Down&amp;arg1=0&amp;arg2=1&amp;arg3=0" cam-profile="dahua_ipc_hdb4100"
+				 cam-profile-vars="JU5BTUUlOkRBSFVBIElQQy1IREI0MTAwRlAtUFQ7JUxIT1NUJToxOTIuMTY4LjEuMjM7JUxQT1JUJToxMDU1NDslTFBQT1JUJToxMDU1NDslUkhPU1QlOjE5Mi4xNjguMS4yMzslUlBPUlQlOjEwNTU0OyVSUFBPUlQlOjEwNTU0OyVWTE9HSU4lOmFkbWluOyVWUEFTU1dEJTpub25lOyVBVVRPUExBWSU6ZmFsc2U="
+				 cam-xml-item-attrs="bmFtZSM6IyVOQU1FJSM7I2lkIzojMjA0OCM7I2ZmbXBlZy1vcHQjOiNydHNwX3RyYW5zcG9ydD10Y3AjOyN0eXBlIzojcnRzcCM7I3VybCM6I3J0c3A6Ly8lVkxPR0lOJTolVlBBU1NXRCVAJUxIT1NUJTolTFBPUlQlIzsjdXJsLXJlbW90ZSM6I3J0c3A6Ly8lVkxPR0lOJTolVlBBU1NXRCVAJVJIT1NUJTolUlBPUlQlIzsjdXJsYyM6I2h0dHA6Ly8lTEhPU1QlOiVMUFBPUlQlIzsjdXJsYy1yZW1vdGUjOiNodHRwOi8vJVJIT1NUJTolUlBQT1JUJSM7I3ZpZGVvLXVyaSM6Iy9jYW0vcmVhbG1vbml0b3I/Y2hhbm5lbD0xJnN1YnR5cGU9MSZ1bmljYXN0PXRydWUmcHJvdG89T252aWYjOyN2aWRlby11cmktZnMjOiMvY2FtL3JlYWxtb25pdG9yP2NoYW5uZWw9MSZzdWJ0eXBlPTAmdW5pY2FzdD10cnVlJnByb3RvPU9udmlmIzsjdmlkZW8tdXJpLXJlbW90ZSM6Iy9jYW0vcmVhbG1vbml0b3I/Y2hhbm5lbD0xJnN1YnR5cGU9MSZ1bmljYXN0PXRydWUmcHJvdG89T252aWYjOyN2aWRlby11cmktcmVtb3RlLWZzIzojL2NhbS9yZWFsbW9uaXRvcj9jaGFubmVsPTEmc3VidHlwZT0wJnVuaWNhc3Q9dHJ1ZSZwcm90bz1PbnZpZiM7I2h0dHAtYXV0aCM6IyVWTE9HSU4lOiVWUEFTU1dEJSM7I3RvcC11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1VcCZhcmcxPTAmYXJnMj0xJmFyZzM9MCM7I2JvdHRvbS11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1Eb3duJmFyZzE9MCZhcmcyPTEmYXJnMz0wIzsjbGVmdC11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1MZWZ0JmFyZzE9MCZhcmcyPTEmYXJnMz0wIzsjcmlnaHQtdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9UmlnaHQmYXJnMT0wJmFyZzI9MSZhcmczPTAjOyNzdG9wLXVyaSM6Iy9jZ2ktYmluL3B0ei5jZ2k/YWN0aW9uPXN0b3AmY2hhbm5lbD0wJmNvZGU9VXAmYXJnMT0wJmFyZzI9MCZhcmczPTAjOyNtaW51cy11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1ab29tV2lkZSZhcmcxPTAmYXJnMj0xJmFyZzM9MCM7I3BsdXMtdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9Wm9vbVRlbGUmYXJnMT0wJmFyZzI9MSZhcmczPTAjOyNzdG9wLXpvb20tdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RvcCZjaGFubmVsPTAmY29kZT1ab29tVGVsZSZhcmcxPTAmYXJnMj0xJmFyZzM9MCM7I3ByZXNldDEtbWFrZS11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1TZXRQcmVzZXQmYXJnMT0wJmFyZzI9MSZhcmczPTAjOyNwcmVzZXQxLXVyaSM6Iy9jZ2ktYmluL3B0ei5jZ2k/YWN0aW9uPXN0YXJ0JmNoYW5uZWw9MCZjb2RlPUdvdG9QcmVzZXQmYXJnMT0wJmFyZzI9MSZhcmczPTAjOyNwcmVzZXQyLW1ha2UtdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9U2V0UHJlc2V0JmFyZzE9MCZhcmcyPTImYXJnMz0wIzsjcHJlc2V0Mi11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1Hb3RvUHJlc2V0JmFyZzE9MCZhcmcyPTImYXJnMz0wIzsjcHJlc2V0My1tYWtlLXVyaSM6Iy9jZ2ktYmluL3B0ei5jZ2k/YWN0aW9uPXN0YXJ0JmNoYW5uZWw9MCZjb2RlPVNldFByZXNldCZhcmcxPTAmYXJnMj0zJmFyZzM9MCM7I3ByZXNldDMtdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9R290b1ByZXNldCZhcmcxPTAmYXJnMj0zJmFyZzM9MCM7I3ByZXNldDQtbWFrZS11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1TZXRQcmVzZXQmYXJnMT0wJmFyZzI9NCZhcmczPTAjOyNwcmVzZXQ0LXVyaSM6Iy9jZ2ktYmluL3B0ei5jZ2k/YWN0aW9uPXN0YXJ0JmNoYW5uZWw9MCZjb2RlPUdvdG9QcmVzZXQmYXJnMT0wJmFyZzI9NCZhcmczPTAjOyNhdXRvLXBsYXkjOiMlQVVUT1BMQVkl"
+				 ffmpeg-opt="rtsp_transport=tcp" http-auth="admin:none" left-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=Left&amp;arg1=0&amp;arg2=1&amp;arg3=0"
+				 minus-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=ZoomWide&amp;arg1=0&amp;arg2=1&amp;arg3=0" name="CAM" plus-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=ZoomTele&amp;arg1=0&amp;arg2=1&amp;arg3=0"
+				 preset1-make-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=SetPreset&amp;arg1=0&amp;arg2=1&amp;arg3=0" preset1-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=GotoPreset&amp;arg1=0&amp;arg2=1&amp;arg3=0"
+				 preset2-make-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=SetPreset&amp;arg1=0&amp;arg2=2&amp;arg3=0" preset2-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=GotoPreset&amp;arg1=0&amp;arg2=2&amp;arg3=0"
+				 preset3-make-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=SetPreset&amp;arg1=0&amp;arg2=3&amp;arg3=0" preset3-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=GotoPreset&amp;arg1=0&amp;arg2=3&amp;arg3=0"
+				 preset4-make-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=SetPreset&amp;arg1=0&amp;arg2=4&amp;arg3=0" preset4-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=GotoPreset&amp;arg1=0&amp;arg2=4&amp;arg3=0"
+				 right-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=Right&amp;arg1=0&amp;arg2=1&amp;arg3=0" stop-uri="/cgi-bin/ptz.cgi?action=stop&amp;channel=0&amp;code=Up&amp;arg1=0&amp;arg2=0&amp;arg3=0"
+				 stop-zoom-uri="/cgi-bin/ptz.cgi?action=stop&amp;channel=0&amp;code=ZoomTele&amp;arg1=0&amp;arg2=1&amp;arg3=0" top-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=Up&amp;arg1=0&amp;arg2=1&amp;arg3=0" type="rtsp"
+				 url="rtsp://192.168.1.23:10554" url-remote="rtsp://89.17.55.74:10554" urlc="http://192.168.1.23:80" urlc-remote="http://89.17.55.74:10555" video-uri="/tcp/av0_0" video-uri-fs="/tcp/av0_0"
+				 video-uri-remote="/tcp/av0_0" video-uri-remote-fs="/tcp/av0_0"/>
+			<item addr="2048:2" auto-play="false" bottom-uri="/cgi-bin/ptz.cgi?action=start&amp;channel=0&amp;code=Down&amp;arg1=0&amp;arg2=5&amp;arg3=0" cam-profile="dahua_hd"
+				 cam-profile-vars="JU5BTUUlOkRhaHVhIEhEOyVMSE9TVCU6MTkyLjE2OC4xLjEwODslTFBPUlQlOjU1NDslTFBQT1JUJTo4MDslUkhPU1QlOjE5Mi4xNjguMS4xMDg7JVJQT1JUJTo1NTQ7JVJQUE9SVCU6ODA7JVZMT0dJTiU6YWRtaW47JVZQQVNTV0QlOmFkbWluOyVBVVRPUExBWSU6ZmFsc2U="
+				 cam-xml-item-attrs="bmFtZSM6IyVOQU1FJSM7I2lkIzojMjA0OCM7I2ZmbXBlZy1vcHQjOiNydHNwX3RyYW5zcG9ydD10Y3AjOyN0eXBlIzojcnRzcCM7I3VybCM6I3J0c3A6Ly8lVkxPR0lOJTolVlBBU1NXRCVAJUxIT1NUJTolTFBPUlQlIzsjdXJsLXJlbW90ZSM6I3J0c3A6Ly8lVkxPR0lOJTolVlBBU1NXRCVAJVJIT1NUJTolUlBPUlQlIzsjdXJsYyM6I2h0dHA6Ly8lTEhPU1QlOiVMUFBPUlQlIzsjdXJsYy1yZW1vdGUjOiNodHRwOi8vJVJIT1NUJTolUlBQT1JUJSM7I3ZpZGVvLXVyaSM6Iy9jYW0vcmVhbG1vbml0b3I/Y2hhbm5lbD0xJnN1YnR5cGU9MCM7I3ZpZGVvLXVyaS1mcyM6Iy9jYW0vcmVhbG1vbml0b3I/Y2hhbm5lbD0xJnN1YnR5cGU9MSM7I2h0dHAtYXV0aCM6IyVWTE9HSU4lOiVWUEFTU1dEJSM7I2JvdHRvbS11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1Eb3duJmFyZzE9MCZhcmcyPTUmYXJnMz0wIzsjbGVmdC11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1MZWZ0JmFyZzE9MCZhcmcyPTUmYXJnMz0wIzsjbWludXMtdXJpIzojaHR0cDovLzE5Mi4xNjguMS4xMDgvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1ab29tV2lkZSZhcmcxPTAmYXJnMj0xJmFyZzM9MCM7I3BsdXMtdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9Wm9vbVRlbGUmYXJnMT0wJmFyZzI9MSZhcmczPTAjOyNwcmVzZXQxLW1ha2UtdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9U2V0UHJlc2V0JmFyZzE9MCZhcmcyPTEmYXJnMz0wIzsjcHJlc2V0MS11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1Hb3RvUHJlc2V0JmFyZzE9MCZhcmcyPTEmYXJnMz0wIzsjcHJlc2V0Mi1tYWtlLXVyaSM6Iy9jZ2ktYmluL3B0ei5jZ2k/YWN0aW9uPXN0YXJ0JmNoYW5uZWw9MCZjb2RlPVNldFByZXNldCZhcmcxPTAmYXJnMj0yJmFyZzM9MCM7I3ByZXNldDItdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9R290b1ByZXNldCZhcmcxPTAmYXJnMj0yJmFyZzM9MCM7I3ByZXNldDMtbWFrZS11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1TZXRQcmVzZXQmYXJnMT0wJmFyZzI9MyZhcmczPTAjOyNwcmVzZXQzLXVyaSM6Iy9jZ2ktYmluL3B0ei5jZ2k/YWN0aW9uPXN0YXJ0JmNoYW5uZWw9MCZjb2RlPUdvdG9QcmVzZXQmYXJnMT0wJmFyZzI9MyZhcmczPTAjOyNwcmVzZXQ0LW1ha2UtdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9U2V0UHJlc2V0JmFyZzE9MCZhcmcyPTQmYXJnMz0wIzsjcHJlc2V0NC11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1Hb3RvUHJlc2V0JmFyZzE9MCZhcmcyPTQmYXJnMz0wIzsjcmlnaHQtdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RhcnQmY2hhbm5lbD0wJmNvZGU9UmlnaHQmYXJnMT0wJmFyZzI9NSZhcmczPTAjOyNzdG9wLXVyaSM6Iy9jZ2ktYmluL3B0ei5jZ2k/YWN0aW9uPXN0b3AmY2hhbm5lbD0wJmNvZGU9VXAmYXJnMT0wJmFyZzI9MCZhcmczPTAjOyNzdG9wLXpvb20tdXJpIzojL2NnaS1iaW4vcHR6LmNnaT9hY3Rpb249c3RvcCZjaGFubmVsPTAmY29kZT1ab29tVGVsZSZhcmcxPTAmYXJnMj0xJmFyZzM9MCM7I3RvcC11cmkjOiMvY2dpLWJpbi9wdHouY2dpP2FjdGlvbj1zdGFydCZjaGFubmVsPTAmY29kZT1VcCZhcmcxPTAmYXJnMj01JmFyZzM9MCM7I2F1dG8tcGxheSM6IyVBVVRPUExBWSU="
+				 ffmpeg-opt="rtsp_transport=tcp" http-auth="admin:mimiadmin2019" name="CAM 2" sound="yes" type="rtsp" url="rtsp://89.17.55.74:64554" url-remote="rtsp://89.17.55.74:64554"
+				 video-uri="/cam/realmonitor?channel=1&amp;subtype=0" video-uri-fs="/cam/realmonitor?channel=1&amp;subtype=0" widget="yes"/>
+			<item addr="2048:22" ip="192.168.1.2" limit="70" name="Гостиная" remote-ip="89.17.55.74:12544" silence="10" type="multi-room" widget="yes"/>
+		</area>
+	</area>
+	<area name="Setup">
+		<item addr="585:8" cfgid="5" name="Switch" type="switch"/>
+		<item addr="585:9" cfgid="5" name="Switch" type="switch"/>
+		<item addr="585:10" cfgid="5" name="Switch" type="switch"/>
+		<item addr="585:11" cfgid="5" name="Door" type="door-sensor"/>
+		<item addr="585:12" cfgid="5" name="Switch 4" type="switch"/>
+		<item addr="585:13" cfgid="5" name="Door" name-en="Door2" type="door-sensor"/>
+		<item addr="585:15" cfgid="5" hw="BBBHSH" name="Voltage" system="yes" type="voltage-sensor"/>
+		<item addr="585:16" auto-period="1" cfgid="4" name="Dimmer" type="dimer-lamp">
+			<automation enabled="yes" illumination-level="10" motion-level="30" motion-sensors="588:40" time-interval="3" type="on-by-moving"/>
+			<automation delay="3" door-sensors="588:59" motion-level="15" motion-sensors="588:40" time-interval="15" type="off-by-door"/>
+			<automation enabled="yes" motion-level="15" motion-sensors="588:40" time-interval="2" type="off-by-moving"/>
+		</item>
+		<item addr="585:22" cfgid="4" name="Temperature" system="yes" type="temperature-sensor"/>
+		<item addr="585:56" auto-period="600" cam="yes" cfgid="7" icon="led-stripe" name="RGB" type="rgb-lamp" widget="yes">
+			<automation illumination-level="0" motion-level="30" motion-sensors="588:40" time-interval="1" type="on-by-moving"/>
+		</item>
+		<item addr="585:59" auto-period="600" cam="yes" cfgid="7" name="Dimmer" type="dimer-lamp"/>
+		<item addr="585:62" cfgid="7" name="Temperature" system="yes" type="temperature-sensor"/>
+		<item addr="585:63" cfgid="7" name="Voltage" system="yes" type="voltage-sensor"/>
+		<item addr="585:98" logic-ver="15" name="Temperature" system="yes" type="temperature-sensor"/>
+	</area>
+	<area name="Vlad test">
+		<item addr="524:250" length="1" sub-type="lamp" type="virtual"/>
+		<item addr="524:249" type="script">
+			u8 state = 0;
+			V-ID/V-ADDR{
+				setStatus(524:250,state);
+					if (state==0) state = 1;
+					else state = 0;
+			}
+
+			V-ID/524:250 {
+				if (opt(0)==0xff){//нажатие на элемент в интерфейсе
+					if (state==0) state = 1;
+					else state = 0;
+					setStatus(524:250,state);//для корректного отображения в интерфейсе
+				}
+			}
+
+		</item>
+	</area>
+	<users>
+		<USER1 name="User1" password="12345"/>
+	</users>
+</smart-house>
