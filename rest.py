@@ -1,20 +1,16 @@
 # app.py
-import waitress
-from flask import Flask, request
+import uvicorn
+from fastapi import FastAPI
+from pydantic import BaseModel
 
 from logic import Logic
 
 logic: Logic = None
+app = FastAPI()
 
-app = Flask(__name__)
 
-
-def myprint():
-    print("rest request: \n", request)
-    if request.is_json:
-        print(request.get_json())
-    else:
-        print(request.get_data())
+class Item(BaseModel):
+    addr: str
 
 
 @app.get("/logic/xml")
@@ -23,17 +19,13 @@ def get_logic_xml():
 
 
 @app.post("/item/get")
-def get_item():
-    if request.is_json:
-        req_json = request.get_json()
-        return logic.get_item(req_json['addr'])
-    return {"error": "Request must be JSON"}, 415
+def get_item(item: Item):
+    print(item)
+    return logic.get_item(item.addr)
 
 
 def run(host, port, _logic: Logic):
     global app, logic
     logic = _logic
-    app.before_request(myprint)
-    server = waitress.create_server(app, host=host, port=port, map=None)
     print('REST server run')
-    server.run()
+    uvicorn.run(app, host='192.168.1.101', port=5000)

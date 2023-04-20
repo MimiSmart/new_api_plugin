@@ -1,0 +1,6 @@
+crc~=4.2.0
+websocket-client~=1.5.1
+uvicorn~=0.21.1
+fastapi~=0.95.1
+pydantic~=1.10.7
+requests~=2.28.2
