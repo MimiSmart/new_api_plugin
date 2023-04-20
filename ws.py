@@ -5,14 +5,15 @@ import websockets
 
 from logic import Logic
 
-logic : Logic = None
+logic: Logic = None
+
 
 def test():
     return {
         'type': 'response',
-        'message': "test completed",
-        'data': {}
+        'message': "test completed"
     }
+
 
 def get_items():
     return {
@@ -29,7 +30,7 @@ commands = {
 
 async def handler(websocket, path):
     data = await websocket.recv()
-    print(data)
+    print("ws request: \n", str(data))
     try:
         data = json.loads(data)
         # check if exists command
@@ -38,23 +39,22 @@ async def handler(websocket, path):
         else:
             reply = {
                 'type': 'error',
-                'message': 'Command not found!',
-                'data': {}
+                'message': 'Command not found!'
             }
     except:
         reply = {
             'type': 'error',
-            'message': 'Invalid json!',
-            'data': {}
+            'message': 'Invalid json!'
         }
-    reply = json.dumps(reply,ensure_ascii=False)
+    reply = json.dumps(reply, ensure_ascii=False)
     await websocket.send(reply)
 
 
-def run(port, _logic : Logic):
+def run(host, port, _logic: Logic):
     global logic
     logic = _logic
-    start_server = websockets.serve(handler, "localhost", port)
+    print('WS server run')
+    start_server = websockets.serve(handler, host, port)
     ws_loop = asyncio.get_event_loop()
 
     ws_loop.run_until_complete(start_server)

@@ -1,0 +1,16 @@
+[Unit]
+
+Description=New REST and WebSocket API plugin
+
+After=multi-user.target
+
+[Service]
+
+Type=idle
+# Nice=1
+ExecStart=/home/sh2/exe/new_api_plugin/main.py
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+
+WantedBy=multi-user.target
