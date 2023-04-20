@@ -65,14 +65,20 @@ class Logic:
                     dd[key].append(value)
             my_dict = {tree.tag: {key: value[0] if len(value) == 1 else value for key, value in dd.items()}}
         if tree.attrib:
-            my_dict[tree.tag].update(('@' + key, value) for key, value in tree.attrib.items())
-            # my_dict[tree.tag].update((key, value) for key, value in tree.attrib.items())
+            # for attrib and childs with same names
+            items = [(key, value) for key, value in tree.attrib.items()]
+            for x in range(len(items)):
+                if items[x][0] in my_dict[tree.tag]:
+                    items[x] = (items[x][0] + '_attrib', items[x][1])
 
+            my_dict[tree.tag].update(items)
         if tree.text:
-            text = tree.text.strip()
+            # correct \n and \t in scripts-body in logic
+            text = tree.text if len(tree.text.strip()) else tree.text.strip()
+
             if child or tree.attrib:
                 if text:
-                    my_dict[tree.tag]['#text'] = text
+                    my_dict[tree.tag]['plain_text'] = text
             else:
                 my_dict[tree.tag] = text
         return my_dict
@@ -136,12 +142,15 @@ class Logic:
             elif isinstance(my_dict, dict):
                 for key, value in my_dict.items():
                     assert isinstance(key, str)
-                    if key.startswith('#'):
-                        assert key == '#text' and isinstance(value, str)
-                        root.text = value
-                    elif key.startswith('@'):
+                    # for attrib and childs with same names
+                    if key.endswith('_attrib'):
+                        key = key.removesuffix('_attrib')
+
+                    if key == 'plain_text':
                         assert isinstance(value, str)
-                        root.set(key[1:], value)
+                        root.text = value
+                    elif isinstance(value, str):
+                        root.set(key, value)
                     elif isinstance(value, list):
                         for e in value:
                             _to_etree(e, ET.SubElement(root, key))
