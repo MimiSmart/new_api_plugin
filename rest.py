@@ -1,12 +1,17 @@
 # app.py
+import json
+from typing import List
+
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+import ws
 from logic import Logic
 
 logic: Logic = None
 app = FastAPI()
+manager = None
 
 
 class Item(BaseModel):
@@ -24,8 +29,43 @@ def get_item(item: Item):
     return logic.get_item(item.addr)
 
 
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+
+@app.websocket("/")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            try:
+                data = json.loads(data)
+                # check if exists command
+                if data['command'] in ws.commands:
+                    reply = ws.commands[data['command']]()
+                else:
+                    reply = {'type': 'error', 'message': 'Command not found!'}
+            except:
+                reply = {'type': 'error', 'message': 'Invalid json!'}
+            reply = json.dumps(reply, ensure_ascii=False)
+            await websocket.send_text(reply)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
 def run(host, port, _logic: Logic):
     global app, logic
     logic = _logic
-    print('REST server run')
-    uvicorn.run(app, host='192.168.1.101', port=5000)
+    manager = ConnectionManager()
+
+    print('Server run')
+    uvicorn.run(app, host=host, port=port)

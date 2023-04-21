@@ -1,7 +1,6 @@
 {
-    "websocket_port": 55559,
-    "rest_port": 55558,
     "logic_path": "/home/sh2/logic.xml",
-    "local_ip": "192.168.1.125"
+    "local_ip": "192.168.1.125",
+    "port": 55558
 }
 
