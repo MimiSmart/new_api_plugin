@@ -4,29 +4,48 @@ from typing import List
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import ws
 from logic import Logic
 
 logic: Logic = None
-app = FastAPI()
+app = FastAPI(title="MimiSmart API")
 manager = None
 
 
-class Item(BaseModel):
+class GetItem(BaseModel):
     addr: str
 
 
-@app.get("/logic/xml")
+class SetItem(BaseModel):
+    type: str = Field(title="Operation type (write, append, remove)")
+    tag: str = Field(title="Tag of item ('item', 'area', etc.)")
+    area: str = Field(title="Name of area. if set item in root - set 'smart-house'")
+    data: dict = Field(title="Attributes and childs of added item in format key:value")
+
+
+@app.get("/logic/get/xml", tags=['rest api'])
 def get_logic_xml():
     return logic.get_xml()
 
 
-@app.post("/item/get")
-def get_item(item: Item):
+@app.get("/logic/get/obj", tags=['rest api'])
+def get_logic_obj():
+    return logic.get_dict()
+
+
+@app.post("/item/get_attributes", tags=['rest api'], response_model=dict,
+          response_description='Return dictionary of item attributes')
+def get_item(item: GetItem):
     print(item)
     return logic.get_item(item.addr)
+
+
+@app.post("/item/set_attributes", tags=['rest api'])
+def set_item(item: SetItem):
+    print(item)
+    return logic.set_item(item.type, item.tag, item.area, item.data)
 
 
 class ConnectionManager:
@@ -68,4 +87,14 @@ def run(host, port, _logic: Logic):
     manager = ConnectionManager()
 
     print('Server run')
+
+    # load ws schemas for openapi docs
+    with open('websocket_schema.json') as f:
+        openapi = app.openapi()
+        tmp = json.load(f)
+        for key, value in tmp['paths'].items():
+            openapi['paths'][key] = value
+        for key, value in tmp['schemas'].items():
+            openapi['components']['schemas'][key] = value
+
     uvicorn.run(app, host=host, port=port)

@@ -1,0 +1,46 @@
+{
+    "paths": {
+        "get_items": {
+            "get": {
+                "tags": [
+                    "ws api"
+                ],
+                "summary": "Get logic structure in json format",
+                "operationId": "get_items",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WsGetItems"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "test",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "schemas": {
+        "WsGetItems": {
+            "title": "Ws Get Items",
+            "required": ["command"],
+            "type": "object",
+            "properties": {
+                "command": {
+                    "title": "Command for execute (input name function)",
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
