@@ -3,11 +3,25 @@ import json
 from collections import defaultdict
 from xml.etree import cElementTree as ET
 
+from crc import Calculator, Crc16
+
 
 class Logic:
     _header = ""
+    path_logic = ""
     xml_logic = ""
     obj_logic = None
+    crc16 = 0
+    updater = None
+    event_list = []  # list of addressess of items with update logic event
+
+    def __init__(self, path_logic):
+        self.path_logic = path_logic
+        data = self.get_xml()
+        self.crc16 = self.checksum(data)
+        self.obj_logic = self.get_dict()
+
+        # self.updater = Thread(target=self.update())
 
     def get_xml(self):
         with open(self.path_logic, 'rb') as f:
@@ -28,11 +42,82 @@ class Logic:
 
         for key in keys[1:]:
             item = item[key]
-        return json.dumps(item, ensure_ascii=False)
+        # return json.dumps(item, ensure_ascii=False)
+        return item
 
     def get_json(self):
         self.get_dict()  # временно, пока нет отслеживания изменений логики
         return self.obj_logic
+
+    def set_item(self, operation, tag, area_name, data):
+        if operation == 'append':
+            if tag != 'item' or 'addr' not in data:
+                return {'type': 'error', 'message': 'Append works only for items with addr'}
+            #берем список item и редачим нужный. данные линкуются в общую структуру
+            items = self._find_all_items(self.obj_logic, tag)
+            for item in items:
+                if item['addr'] == data['addr']:
+                    for key, value in data.items():
+                        item[key] = value
+                    self.write()
+                    return {'type': 'response', 'message': 'Append successfully'}
+            return {'type': 'error', 'message': 'Not found '+data['addr']}
+        elif operation == 'remove':
+            if tag != 'item' or 'addr' not in data:
+                return {'type': 'error', 'message': 'Remove works only for items with addr'}
+            #берем список item и редачим нужный. данные линкуются в общую структуру
+            items = self._find_all_items(self.obj_logic, tag)
+            for item in items:
+                if item['addr'] == data['addr']:
+                    for key in data.keys():
+                        if key != 'addr':
+                            item.pop(key)
+                    self.write()
+                    return {'type': 'response', 'message': 'Removed successfully'}
+        elif operation == 'write':
+            # если есть адрес - проще всего по нему найти
+            if 'addr' in data:
+                # берем список item и редачим нужный. данные линкуются в общую структуру
+
+                items = self._find_all_items(self.obj_logic, tag)
+                for cntr in range(len(items)):
+                    if items[cntr]['addr'] == data['addr']:
+                        #копируем новое и удаляем лишние старые ключи
+                        lst = set(items[cntr].keys()) - set(data.keys())
+                        for key, value in data.items():
+                            items[cntr][key] = value
+                        for key in lst:
+                            items[cntr].pop(key)
+                        self.write()
+                        return {'type': 'response', 'message': 'Write successfully'}
+            # находим комнату
+            area = None
+            if area_name == 'smart-house':
+                area = self.obj_logic['smart-house']
+            else:
+                areas = self._find_all_items(self.obj_logic, 'area')
+                for x in areas:
+                    if x['name'] == area_name:
+                        area = x
+                if area is None:
+                    return {'type': 'error', 'message': 'Area not found!'}
+
+            if tag in area:
+                # если имеется список итемов с таким тегом, то добавляем
+                if isinstance(area[tag], list):
+                    area[tag].append(data)
+                # если только 1 итем с таким тегом - значит он dict
+                # и делаем из него list с добавлением нового итема
+                else:
+                    area[tag] = [area[tag], data]
+            # если с таким тегом вообще нет итемов - делаем dict
+            else:
+                area[tag] = data
+            self.write()
+            return {'type': 'response', 'message': 'Write successfully'}
+            # if type(apea[tag]) is list:
+
+
 
     def write(self):
         with open(self.path_logic, 'wb') as f:
@@ -105,13 +190,22 @@ class Logic:
                                     keys.append(tag)
                                     keys.append(cntr)
                                     return keys
+                                # если обнаружили вложенный тег
+                                if tag in item:
+                                    tmp_keys = self._find_path_2_item(item, tag, g_key, g_value)
+                                    if len(tmp_keys) != 0:
+                                        keys.append(key)
+                                        keys.append(cntr)
+                                        for tmp_key in tmp_keys:
+                                            keys.append(tmp_key)
+                                        return keys
                             cntr += 1
                     # если data не list, то у него либо имеется ключ g_key, либо мы его внутри вообще не найдем
                     elif g_key in data[tag]:
                         if data[tag][g_key] == g_value:
                             keys.append(key)
-                            keys.append(tag)
-                            keys.append(g_key)
+                            # keys.append(tag)
+                            # keys.append(g_key)
                             return keys
                 # если тэга на этом уровне не нашли, то пытаемся поискать внутри data[key]
                 else:
@@ -170,3 +264,54 @@ class Logic:
         rough_string = ET.tostring(elem, 'utf-8')
         reparsed = minidom.parseString(rough_string)
         return reparsed.toprettyxml(indent="".join(["\t"]))
+
+    def checksum(self, data):
+        calculator = Calculator(Crc16.CCITT, optimized=True)
+        return calculator.checksum(data)
+
+    # Thread
+    def update(self):
+        data = self.get_xml()
+        new_crc = self.checksum(data)
+        if new_crc != self.crc16:
+            # if True:
+            # тут будет триггериться ивент на обновление логики клиентам
+            # не забыть что и на отдельные итемы тоже обнову ннадо делать
+
+            # data = self.get_dict()
+            # data2 = self._find_all_items(data)
+            # crc_items = dict()
+            # for item in data2:
+            #     crc_items [item['@addr']] =
+
+            self.obj_logic = self.get_dict()
+            self.crc16 = new_crc
+
+    def _find_all_items(self, data, tag='item'):
+        items = []
+        if type(data) is dict:
+            for key in data.keys():
+                # если находим тэг
+                if tag in data:
+                    # если data[tag] является листом
+                    if type(data[tag]) is list:
+                        for item in data[tag]:
+                            items.append(item)
+                            tmp_items = self._find_all_items(item, tag)
+                            for tmp_item in tmp_items:
+                                items.append(tmp_item)
+                    else:
+                        items.append(data[tag])
+                # если тэга на этом уровне не нашли, то пытаемся поискать внутри data[key]
+                else:
+                    tmp_items = self._find_all_items(data[key], tag)
+                    for tmp_item in tmp_items:
+                        items.append(tmp_item)
+        # если нам изначально пришел не dict, а list (это должно происходить только в процессе рекурсии)
+        elif type(data) is list:
+            for part in data:
+                # то ищем внутри каждого элемента
+                tmp_items = self._find_all_items(part, tag)
+                for tmp_item in tmp_items:
+                    items.append(tmp_item)
+        return [i for n, i in enumerate(items) if i not in items[:n]]  # убираем дубликаты
