@@ -4,48 +4,46 @@ from typing import List
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from pydantic import BaseModel, Field
 
 import ws
+from api_models import *
 from logic import Logic
+
+# home_path = '/home/sh2/exe/new_api_plugin/' #RELEASE
+home_path = './'  # DEBUG
 
 logic: Logic = None
 app = FastAPI(title="MimiSmart API")
 manager = None
 
 
-class GetItem(BaseModel):
-    addr: str
-
-
-class SetItem(BaseModel):
-    type: str = Field(title="Operation type (write, append, remove)")
-    tag: str = Field(title="Tag of item ('item', 'area', etc.)")
-    area: str = Field(title="Name of area. if set item in root - set 'smart-house'")
-    data: dict = Field(title="Attributes and childs of added item in format key:value")
-
-
-@app.get("/logic/get/xml", tags=['rest api'])
+@app.get("/logic/get/xml", tags=['rest api'], summary="Get logic in xml")
 def get_logic_xml():
     return logic.get_xml()
 
 
-@app.get("/logic/get/obj", tags=['rest api'])
+@app.get("/logic/get/obj", tags=['rest api'], summary="Get logic in json")
 def get_logic_obj():
     return logic.get_dict()
 
 
 @app.post("/item/get_attributes", tags=['rest api'], response_model=dict,
-          response_description='Return dictionary of item attributes')
+          response_description='Return dictionary of item attributes',
+          summary="Get item if json format")
 def get_item(item: GetItem):
     print(item)
     return logic.get_item(item.addr)
 
 
-@app.post("/item/set_attributes", tags=['rest api'])
+@app.post("/item/set_attributes", tags=['rest api'], summary="Write/append/remove item")
 def set_item(item: SetItem):
     print(item)
     return logic.set_item(item.type, item.tag, item.area, item.data)
+
+
+@app.post("/item/delete", tags=['rest api'], summary="Delete item")
+def del_item(item: DelItem):
+    return logic.del_item(item.addr)
 
 
 class ConnectionManager:
@@ -62,6 +60,7 @@ class ConnectionManager:
 
 @app.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
+    global manager
     await manager.connect(websocket)
     try:
         while True:
@@ -70,7 +69,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 data = json.loads(data)
                 # check if exists command
                 if data['command'] in ws.commands:
-                    reply = ws.commands[data['command']]()
+                    cmd = data['command']
+                    data.pop('command')
+                    reply = ws.commands[cmd](logic, data)
                 else:
                     reply = {'type': 'error', 'message': 'Command not found!'}
             except:
@@ -82,14 +83,12 @@ async def websocket_endpoint(websocket: WebSocket):
 
 
 def run(host, port, _logic: Logic):
-    global app, logic
+    global app, logic, manager
     logic = _logic
     manager = ConnectionManager()
 
-    print('Server run')
-
     # load ws schemas for openapi docs
-    with open('websocket_schema.json') as f:
+    with open(home_path + 'websocket_schema.json') as f:
         openapi = app.openapi()
         tmp = json.load(f)
         for key, value in tmp['paths'].items():

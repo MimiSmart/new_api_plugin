@@ -117,7 +117,22 @@ class Logic:
             return {'type': 'response', 'message': 'Write successfully'}
             # if type(apea[tag]) is list:
 
-
+    def del_item(self, addr):  # not tested
+        keys = self._find_path_2_item(self.obj_logic, "item", 'addr', addr)
+        if len(keys) == 0:
+            return {'type': 'error', 'message': 'Addr not found'}
+        else:
+            item = self.obj_logic
+            for key in keys[:-1]:
+                item = item[key]
+            # if many items
+            if isinstance(item, list):
+                item.pop(keys[-1])
+            # if 1 item
+            elif isinstance(item, dict):
+                item.pop(item)
+        self.write()
+        return {'type': 'response', 'message': 'Delete item successfully'}
 
     def write(self):
         with open(self.path_logic, 'wb') as f:

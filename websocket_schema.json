@@ -2,9 +2,7 @@
     "paths": {
         "get_items": {
             "get": {
-                "tags": [
-                    "ws api"
-                ],
+                "tags": ["ws api"],
                 "summary": "Get logic structure in json format",
                 "operationId": "get_items",
                 "requestBody": {
@@ -16,23 +14,47 @@
                         }
                     },
                     "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "test",
-                        "content": {
-                            "application/json": {
-                                "schema": {}
+                }
+            }
+        },
+        "set_item": {
+            "post": {
+                "tags": ["ws api"],
+                "summary": "Write/append/remove item",
+                "operationId": "set_item",
+                "requestBody": {
+                    "content": {
+                        "json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WsSetItem"
                             }
                         }
-                    }
+                    },
+                    "required": true
+                }
+            }
+        },
+        "del_item": {
+            "post": {
+                "tags": ["ws api"],
+                "summary": "Delete item",
+                "operationId": "del_item",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DelItem"
+                            }
+                        }
+                    },
+                    "required": true
                 }
             }
         }
     },
     "schemas": {
         "WsGetItems": {
-            "title": "Ws Get Items",
+            "title": "Websocket Get Items",
             "required": ["command"],
             "type": "object",
             "properties": {
@@ -40,6 +62,39 @@
                     "title": "Command for execute (input name function)",
                     "type": "string"
                 }
+            }
+        },
+        "WsSetItem": {
+            "title": "Websocket Set Item",
+            "required": [
+                "command",
+                "type",
+                "tag",
+                "area",
+                "data"
+            ],
+            "type": "object",
+            "properties": {
+                    "command": {
+                        "title": "Command for execute (input name function)",
+                        "type": "string"
+                    },
+                    "type": {
+                            "title": "Operation type (write, append, remove)",
+                            "type": "string"
+                        },
+                    "tag": {
+                        "title": "Tag of item ('item', 'area', etc.)",
+                        "type": "string"
+                    },
+                    "area": {
+                        "title": "Name of area. if set item in root - set 'smart-house'",
+                        "type": "string"
+                    },
+                    "data": {
+                        "title": "Attributes and childs of added item in format key:value",
+                        "type": "object"
+                    }
             }
         }
     }
