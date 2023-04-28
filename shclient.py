@@ -154,11 +154,11 @@ class SHClient():
             while (size - len(res)) > 0:
                 res += self.connectionResource.recvfrom(size - len(res))[0]
         else:
-            stream_set_blocking(self.connectionResource, 0)  # set socket to nonblock status
-            info = stream_get_meta_data(self.connectionResource)
-            while (size - len(res)) > 0 and not info['timed_out'] and not feof(self.connectionResource):
+            self.connectionResource.setblocking(False)  # set socket to nonblock status
+            while (size - len(res)) > 0:
                 res += self.connectionResource.recvfrom(size - len(res))[0]
             self.connectionResource.setblocking(True)  # set socket to block status
+
         return {"success": success, "data": res}
 
     def disconnect(self):
@@ -166,12 +166,14 @@ class SHClient():
             self.connectionResource.close()
             self.connectionResource = None
 
-    def requestDeviceState(self, id, subid):
+    def requestAllDevicesState(self):
         resultData = dict()
-        if self.runSuccess and id > 0 and subid > 0:
-            data = self.packData(id, 0, 14, 0, [0, 0, 0, 0, 0, 0])
-            self.connectionResource.send(data)
-            resultData = self.readDeviceState(id, subid)
+        if self.runSuccess :
+            data = self.packData(0, 0, 14, 0, [0, 0, 0, 0, 0, 0])
+            print("Send data:", data.hex(' '))
+            if not self.connectionResource.send(data):
+                print("error send")
+            resultData = self.readAllDevicesState()
         return resultData
 
     def packData(self, id, subid, pd, length, value=[0, 0, 0, 0, 0, 0]):
@@ -182,95 +184,61 @@ class SHClient():
         return s
 
     # get single device state
-    # def readDeviceState(self, id, subid):
-    #     resultData = list()
-    #     foundItem = False
-    #     for j in range(300):
-    #         if foundItem: break
-    #
-    #         data = self.fread(10)
-    #         print(data)
-    #         # bin = ''.join(data["data"])
-    #         # print(bin2hex(bin))
-    #
-    #         if not data["success"]:
-    #             return resultData
-    #         unpackData = struct.unpack("L6B", data["data"])
-    #         shHead = ""
-    #         for i in range(1, 7):
-    #             shHead += chr(unpackData[i])
-    #
-    #         if shHead != "" and unpackData[0] == 6:
-    #             continue
-    #
-    #         if shHead == "shcxml":
-    #             line = self.fread(4)
-    #             if not line["success"]:
-    #                 return resultData
-    #             crc = struct.unpack("L", line["data"])
-    #
-    #             line = self.fread(1)
-    #             if not line["success"]: return resultData
-    #             addata = struct.unpack("B", line["data"])
-    #             line = self.fread(unpackData[0] - 5)
-    #             if not line["success"]: return resultData
-    #         elif shHead == "messag":
-    #             message = self.fread(unpackData[0] - 6)
-    #             if not message["success"]: return resultData
-    #         else:
-    #             unpackData = struct.unpack("2H4BH", data["data"])
-    #
-    #             if unpackData[2] == 15:
-    #                 dataLength = unpackData[6]
-    #                 while dataLength > 0:
-    #                     line = self.fread(2)
-    #                     if not line["success"]:
-    #                         return resultData
-    #                     dataLength -= 2
-    #                     ucanData = struct.unpack("2B", line["data"])
-    #                     tmpdata = self.fread(ucanData[1])
-    #                     if not tmpdata["success"]: return resultData
-    #                     line = tmpdata["data"]
-    #                     dataLength -= ucanData[1]
-    #                     values = list()
-    #                     index = str(unpackData[0]) + ":" + str(ucanData[0])
-    #
-    #                     # itemType = self.getItemType(int(unpackData[0]), int(ucanData[0]))
-    #                     #
-    #                     # if ucanData[1] == 1:
-    #                     #     addata = struct.unpack("B", line)
-    #                     #     values.append(addata[0])
-    #                     # elif ucanData[1] == 2 and itemType != "dimer-lamp" and not strpos(itemType, "sensor"):
-    #                     #     addata = struct.unpack("B", line)
-    #                     #     values.append(addata[0])
-    #                     # elif ucanData[1] == 2 and itemType == "dimer-lamp":
-    #                     #     addata = struct.unpack("B", line)
-    #                     #     for v in addata:
-    #                     #         values.append(v)
-    #                     #     if array_key_exists(1, values):
-    #                     #         if self.bcmathExist: values[1] = round(bcdiv(values[1], 2+5))
-    #                     #         else:
-    #                     #             values[1] = round(values[1] / 2+5)
-    #                     # elif ucanData[1] == 2:
-    #                     addata = struct.unpack("H", line)
-    #                     if addata[0] > 32768:
-    #                         value = round((double)((65536 - addata[0]) / -256), 2)
-    #                     else:
-    #                         value = round((double)(addata[0] / 256), 2)
-    #                     values.append(value)
-    #                     # elif ucanData[1] > 2:
-    #                     #     addata = struct.unpack("B", line)
-    #                     #     for v in addata:
-    #                     #         values.append(v)
-    #                     # if int(id) == int(unpackData[0]) and int(subid) == int(ucanData[0]) and count(values):
-    #                     #     foundItem = True
-    #                     #     resultData = values
-    #                     #     self.devicesStatesStore[index] = values
-    #             else:
-    #                 ad = self.fread(unpackData[1])
-    #                 if not ad["success"]:
-    #                     return resultData
-    #     return resultData
+    def readAllDevicesState(self):
+        values = dict()
+        foundItem = False
+        for j in range(300):
+            print(j)
+            if foundItem:
+                break
+            data = self.fread(10)
+
+            if not data["success"]:
+                return resultData
+            unpackData = struct.unpack("L6B", data["data"])
+
+            shHead = "".join(chr(char) for char in unpackData[1:])
+
+
+
+            if shHead != "" and unpackData[0] == 6:
+                continue
+            if shHead == "shcxml":
+                line = self.fread(unpackData[0])
+                if not line["success"]:
+                    return values
+            elif shHead == "messag":
+                message = self.fread(unpackData[0] - 6)
+                if not message["success"]:
+                    return values
+            else:
+                unpackData = struct.unpack("2H4BH", data["data"])
+                if unpackData[2] == 15:
+                    dataLength = unpackData[6]
+                    while dataLength > 0:
+                        line = self.fread(2)
+                        if not line["success"]:
+                            return values
+                        dataLength -= 2
+                        ucanData = struct.unpack("2B", line["data"])
+                        tmpdata = self.fread(ucanData[1])
+                        if not tmpdata["success"]:
+                            return values
+                        dataLength -= ucanData[1]
+
+                        line = tmpdata["data"]
+                        # if unpackData[0] != id:
+                        #     return values
+                        if unpackData[0] not in values:
+                            values[unpackData[0]] = dict()
+                        values[unpackData[0]][ucanData[0]] = line  #.hex(' ')
+                        # if ucanData[0] == subid:
+                        #     return values
+                else:
+                    ad = self.fread(unpackData[6])
+                    if not ad["success"]:
+                        return values
+        return values
 
     # # find item with requested id and subid in xml and return type attribute value
     # def getItemType(self, id, subid):
@@ -378,6 +346,8 @@ shClient = SHClient("", "", "1234567890123456", LogPath, LogicPath)
 shClient.readFromBlockedSocket = True
 if shClient.run():
     print("shclient run\n")
-    pprint(shClient.requestDeviceState(524, 98))
+    # for x in range(20):
+    pprint(shClient.requestAllDevicesState())
+    shClient.disconnect()
 # except:
 # print("No connection to shs server")
