@@ -1,9 +1,9 @@
 # app.py
 import json
-from typing import List
+from typing import List, Annotated
 
 import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body
 
 import ws
 from api_models import *
@@ -27,30 +27,34 @@ def get_logic_obj():
     return logic.get_dict()
 
 
-@app.post("/item/get_attributes", tags=['rest api'], response_model=dict,
-          response_description='Return dictionary of item attributes',
-          summary="Get item if json format")
-def get_item(item: GetItem):
+@app.get("/item/get_attributes/{addr}", tags=['rest api'], response_model=dict,
+         response_description='Return dictionary of item attributes',
+         summary="Get item if json format")
+def get_item(addr: str):
     print(item)
-    return logic.get_item(item.addr)
+    return logic.get_item(addr)
 
 
 @app.post("/item/set_attributes", tags=['rest api'], summary="Write/append/remove item")
-def set_item(item: SetItem):
+def set_item(item: Annotated[SetItem, Body(
+    examples={
+        "write": {"value": {"type": "write", "tag": "item", "area": "System",
+                            "data": {"addr": "999:99", "type": "lamp", "name": "Example lamp"}, }},
+        "remove": {"value": {"type": "remove", "tag": "item", "area": "System", "data": {"addr": "999:99"}}}
+    }, ),], ):
     print(item)
     return logic.set_item(item.type, item.tag, item.area, item.data)
 
 
-@app.post("/item/delete", tags=['rest api'], summary="Delete item")
-def del_item(item: DelItem):
+@app.delete("/item/delete", tags=['rest api'], summary="Delete item")
+def del_item(item: Annotated[DelItem, Body(example={"addr": "999:99"}, ),], ):
     return logic.del_item(item.addr)
 
 
-@app.post("/item/get_state", tags=['rest api'], response_description='Return string of bytes state',
+@app.post("/item/get_state/{addr}", tags=['rest api'], response_description='Return string of bytes state',
           summary="Get current state of item")
-def get_state(item: GetItem):
-    print(item)
-    return logic.status_items[item.addr]
+def get_state(addr: str):
+    return logic.get_state(addr)
 
 
 class ConnectionManager:

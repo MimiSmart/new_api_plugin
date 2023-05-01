@@ -17,6 +17,23 @@
                 }
             }
         },
+        "get_item": {
+            "get": {
+                "tags": ["ws api"],
+                "summary": "Get item in json format",
+                "operationId": "get_item",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WsGetItem"
+                            }
+                        }
+                    },
+                    "required": true
+                }
+            }
+        },
         "set_item": {
             "post": {
                 "tags": ["ws api"],
@@ -35,7 +52,7 @@
             }
         },
         "del_item": {
-            "post": {
+            "delete": {
                 "tags": ["ws api"],
                 "summary": "Delete item",
                 "operationId": "del_item",
@@ -52,7 +69,7 @@
             }
         },
         "get_state": {
-            "post": {
+            "get": {
                 "tags": ["ws api"],
                 "summary": "Get current state of item",
                 "operationId": "get_state",
@@ -132,6 +149,24 @@
                         }
             }
         },
+        "WsGetItem": {
+            "title": "Websocket Get Item",
+            "required": [
+                "command",
+                "addr"
+            ],
+            "type": "object",
+            "properties": {
+                    "command": {
+                        "title": "Command for execute (input name function)",
+                        "type": "string"
+                    },
+                    "addr": {
+                            "title": "Address of item",
+                            "type": "string"
+                        }
+            }
+        },
         "WsGetState": {
             "title": "Websocket get state of item",
             "required": [
@@ -145,7 +180,7 @@
                         "type": "string"
                     },
                     "addr": {
-                            "title": "Address of item",
+                            "title": "Address of item or list addressess",
                             "type": "string"
                         }
             }

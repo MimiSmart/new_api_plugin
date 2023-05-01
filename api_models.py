@@ -1,3 +1,5 @@
+from typing import Union
+
 from pydantic import BaseModel, Field
 
 
@@ -5,8 +7,8 @@ class DelItem(BaseModel):
     addr: str
 
 
-class GetItem(BaseModel):
-    addr: str
+class GetState(BaseModel):
+    addr: Union[str, list[str]]
 
 
 class SetItem(BaseModel):
