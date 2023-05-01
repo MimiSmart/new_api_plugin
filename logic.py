@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import json
 from collections import defaultdict
 from xml.etree import cElementTree as ET
 
@@ -13,6 +12,7 @@ class Logic:
     obj_logic = None
     crc16 = 0
     updater = None
+    state_items = dict()
     event_list = []  # list of addressess of items with update logic event
 
     def __init__(self, path_logic):
@@ -30,14 +30,12 @@ class Logic:
         return self._header + self.xml_logic
 
     def get_dict(self):
-        self.get_xml()  # временно, пока нет отслеживания изменений логики
         e = ET.XML(self.xml_logic.decode())
-        self.obj_logic = self._xml2dict(e)
-        return self.obj_logic
+        # self.obj_logic = self._xml2dict(e)
+        return self._xml2dict(e)
 
     def get_item(self, addr):
-        self.get_dict()  # временно, пока нет отслеживания изменений логики
-        keys = self._find_path_2_item(self.obj_logic, 'item', '@addr', addr)
+        keys = self._find_path_2_item(self.obj_logic, 'item', 'addr', addr)
         item = self.obj_logic[keys[0]]
 
         for key in keys[1:]:
@@ -46,14 +44,13 @@ class Logic:
         return item
 
     def get_json(self):
-        self.get_dict()  # временно, пока нет отслеживания изменений логики
         return self.obj_logic
 
     def set_item(self, operation, tag, area_name, data):
         if operation == 'append':
             if tag != 'item' or 'addr' not in data:
                 return {'type': 'error', 'message': 'Append works only for items with addr'}
-            #берем список item и редачим нужный. данные линкуются в общую структуру
+            # берем список item и редачим нужный. данные линкуются в общую структуру
             items = self._find_all_items(self.obj_logic, tag)
             for item in items:
                 if item['addr'] == data['addr']:
@@ -61,11 +58,11 @@ class Logic:
                         item[key] = value
                     self.write()
                     return {'type': 'response', 'message': 'Append successfully'}
-            return {'type': 'error', 'message': 'Not found '+data['addr']}
+            return {'type': 'error', 'message': 'Not found ' + data['addr']}
         elif operation == 'remove':
             if tag != 'item' or 'addr' not in data:
                 return {'type': 'error', 'message': 'Remove works only for items with addr'}
-            #берем список item и редачим нужный. данные линкуются в общую структуру
+            # берем список item и редачим нужный. данные линкуются в общую структуру
             items = self._find_all_items(self.obj_logic, tag)
             for item in items:
                 if item['addr'] == data['addr']:
@@ -78,11 +75,10 @@ class Logic:
             # если есть адрес - проще всего по нему найти
             if 'addr' in data:
                 # берем список item и редачим нужный. данные линкуются в общую структуру
-
                 items = self._find_all_items(self.obj_logic, tag)
                 for cntr in range(len(items)):
                     if items[cntr]['addr'] == data['addr']:
-                        #копируем новое и удаляем лишние старые ключи
+                        # копируем новое и удаляем лишние старые ключи
                         lst = set(items[cntr].keys()) - set(data.keys())
                         for key, value in data.items():
                             items[cntr][key] = value

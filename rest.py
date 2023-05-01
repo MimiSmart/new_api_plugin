@@ -9,8 +9,8 @@ import ws
 from api_models import *
 from logic import Logic
 
-# home_path = '/home/sh2/exe/new_api_plugin/' #RELEASE
-home_path = './'  # DEBUG
+home_path = '/home/sh2/exe/new_api_plugin/'  # RELEASE
+# home_path = './'  # DEBUG
 
 logic: Logic = None
 app = FastAPI(title="MimiSmart API")
@@ -44,6 +44,13 @@ def set_item(item: SetItem):
 @app.post("/item/delete", tags=['rest api'], summary="Delete item")
 def del_item(item: DelItem):
     return logic.del_item(item.addr)
+
+
+@app.post("/item/get_state", tags=['rest api'], response_description='Return string of bytes state',
+          summary="Get current state of item")
+def get_state(item: GetItem):
+    print(item)
+    return logic.status_items[item.addr]
 
 
 class ConnectionManager:

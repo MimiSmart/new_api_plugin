@@ -1,20 +1,12 @@
 import os
 import socket
 import struct
-from pprint import pprint
 import time
+
+# from time import time
 
 LogPath = '/home/sh2/logs/log.txt'
 LogicPath = '/home/sh2/logic.xml'
-
-
-# import socket
-# connectionResource = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# # connectionResource.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-# # connectionResource.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-# connectionResource.connect(("127.0.0.1", 55555))
-# connectionResource.settimeout(5)
-# res = connectionResource.recvfrom(10)
 
 
 class SHClient():
@@ -22,7 +14,6 @@ class SHClient():
     port = "55555"
     aes = None
     aeskey = ""
-    logFile = ""
     initClientDefValue = 0x7ef
     initClientID = 0
     logicXml = ""
@@ -66,11 +57,10 @@ class SHClient():
     retranslateUdpSent = False
     devHistory = []
 
-    def __init__(self, host="", port="", aeskey="", logfile="", xmlfile=""):
+    def __init__(self, host="", port="", aeskey="", xmlfile=""):
         if host != "": self.host = host
         if port != "": self.port = port
         self.aeskey = aeskey
-        self.logFile = logfile
         self.xmlFile = xmlfile
 
     def run(self):
@@ -98,31 +88,7 @@ class SHClient():
         if self.logicXml == "":
             self.logicXml = "<?xml version='1+0' encoding='UTF-8'?><smart-house name=\"Умный дом\"></smart-house>"
 
-        # from xml.dom import minidom,
-
-        # begin load xml
-        # self.xmlDoc = minidom.parse(self.logicXml)
-
-        # ('1+0', "UTF-8")
-        # self.xmlDoc.formatOutput = True
-        # self.xmlDoc.preserveWhiteSpace = False
-
-        # set_error_handler(function(number, error):
-        #     if preg_match('/^DOMDocument::loadXML\(\): (++)/', error, m):
-        #         throw new Exception(m[1])
-        #     )
-        #
-        # try:
-        #     self.xmlDoc.loadXML(self.logicXml)
-        # except Exception:
-        #     self.errors = "__METHOD__"+" line: "+"__LINE__"+" "+"parse xml error: "+e.getMessage()
-        #     return False
-        # restore_error_handler()
-        # end load xml
-
-        # self.xpath = new DOMXPath(self.xmlDoc)
         self.runSuccess = True
-        # self.getDisplayedDevices()
         return True
 
     # ready
@@ -166,16 +132,18 @@ class SHClient():
             self.connectionResource.close()
             self.connectionResource = None
 
-    def requestAllDevicesState(self):
-        resultData = dict()
-        if self.runSuccess :
-            data = self.packData(0, 0, 14, 0, [0, 0, 0, 0, 0, 0])
-            print("Send data:", data.hex(' '))
+    def requestAllDevicesState(self, id=0):
+        if self.runSuccess:
+            data = self.packData(id, 0, 14, 0, [0, 0, 0, 0, 0, 0])
+            # print("Send data:", data.hex(' '))
             if not self.connectionResource.send(data):
                 print("error send")
-            resultData = self.readAllDevicesState()
-        return resultData
 
+    # PD=14 - REQUEST_ALL_DEVICES. if use with id module - this module returned first
+    # PD=7 - set status
+    # PD=1 - start packet
+    # PD=30 - synchro time packet
+    # PD=15 - ping module->server with states
     def packData(self, id, subid, pd, length, value=[0, 0, 0, 0, 0, 0]):
         s = struct.pack("2H4BH", self.initClientID, id, pd, 0, 0, subid, length)
         if length > 0:
@@ -184,13 +152,9 @@ class SHClient():
         return s
 
     # get single device state
-    def readAllDevicesState(self):
-        values = dict()
-        foundItem = False
-        for j in range(300):
-            print(j)
-            if foundItem:
-                break
+    def listener(self, items):
+        print("Started listen packets")
+        while True:
             data = self.fread(10)
 
             if not data["success"]:
@@ -199,59 +163,56 @@ class SHClient():
 
             shHead = "".join(chr(char) for char in unpackData[1:])
 
-
+            # можно сделать в отдельном потоке постоянную мониторилку пакетов и с возможностью отдельно вызвать с id:subid для поиска нужного элемента
+            # проверить: если мониторить, и в это время параллельно отправить запрос то придет ли первой инфа по этому модулю
 
             if shHead != "" and unpackData[0] == 6:
                 continue
             if shHead == "shcxml":
                 line = self.fread(unpackData[0])
-                if not line["success"]:
-                    return values
+                continue
             elif shHead == "messag":
                 message = self.fread(unpackData[0] - 6)
-                if not message["success"]:
-                    return values
+                continue
             else:
-                unpackData = struct.unpack("2H4BH", data["data"])
-                if unpackData[2] == 15:
-                    dataLength = unpackData[6]
+                senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH", data["data"])
+                # print("senderId: ", senderId)
+                # print("destId: ", destId)
+                # print("PD:", PD)
+                # print("transid:", transid)
+                # print("senderSubId:", senderSubId)
+                # print("destSubId:", destSubId)
+                # print("dataLength:", dataLength)
+
+                if PD == 15:
                     while dataLength > 0:
                         line = self.fread(2)
-                        if not line["success"]:
-                            return values
                         dataLength -= 2
-                        ucanData = struct.unpack("2B", line["data"])
-                        tmpdata = self.fread(ucanData[1])
-                        if not tmpdata["success"]:
-                            return values
-                        dataLength -= ucanData[1]
 
-                        line = tmpdata["data"]
-                        # if unpackData[0] != id:
-                        #     return values
-                        if unpackData[0] not in values:
-                            values[unpackData[0]] = dict()
-                        values[unpackData[0]][ucanData[0]] = line  #.hex(' ')
-                        # if ucanData[0] == subid:
-                        #     return values
+                        subid, length = struct.unpack("2B", line["data"])
+                        addr = str(senderId) + ':' + str(subid)
+
+                        data = self.fread(length)
+                        dataLength -= length
+
+                        # items[addr] = {'state': data["data"], 'timestamp': int(time.time())}
+                        items[addr] = {'state': data["data"].hex(' ')}
+
+                        # print("addr:%s\tstate:%s" % (addr, data["data"].hex(' ')))
+                elif PD == 7:
+                    data = self.fread(dataLength)
+                    # print("data:", data['data'].hex(' '))
+                    addr = str(senderId) + ':' + str(senderSubId)
+                    # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
+                    items[addr] = {'state': data["data"].hex(' ')}
+
+                    # print("addr:%s\tstate:%s"%(addr,data["data"].hex(' ')))
+                # skip other packets
                 else:
-                    ad = self.fread(unpackData[6])
+                    ad = self.fread(dataLength)
                     if not ad["success"]:
                         return values
         return values
-
-    # # find item with requested id and subid in xml and return type attribute value
-    # def getItemType(self, id, subid):
-    #     type = ""
-    #     if self.xpath is None: return type
-    #
-    #     query = '#item[(@id="' + str(id) + '" and @sub-id="' + str(subid) + '") or @addr="' + str(id) + ':' + str(
-    #         subid) + '"]/@type'
-    #
-    #     entries = self.xpath.query(query)
-    #     if is_object(entries) and entries.length > 0:
-    #         type = entries.item[0].nodeValue
-    #     return type
 
     def readXmlLogic(self):
         xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
@@ -319,35 +280,23 @@ class SHClient():
                 time.sleep(0.1)
 
     # def getDisplayedDevices(self):
-    #     if self.runSuccess:
     #         query = '#area[not(@permissions)]/item[@type!="rtsp" and @type!="remote-control" and @type!="multi-room" and @type!="virtual"]'
-    #         if self.devicesQuery != "": query = self.devicesQuery
-    #         entries = self.xpath.query(query)
-    #
-    #         if is_object(entries) and entries.length > 0:
-    #             for entry in entries:
-    #                 entryAttributes = array()
-    #                 for attr in entry.attributes:
-    #                     entryAttributes[attr.nodeName] = attr.nodeValue
-    #                 id = subid = 0
-    #                 if "id" in entryAttributes:
-    #                     id = entryAttributes["id"]
-    #                 if "sub-id" in entryAttributes:
-    #                     subid = entryAttributes["sub-id"]
-    #                 if "addr" in entryAttributes:
-    #                     id, subid = explode(":", entryAttributes["addr"])
-    #                 if int(id) > 0 and int(subid) > 0:
-    #                     index = id + ":" + subid
-    #                     self.displayedDevices[index] = {"id": id, "subid": subid}
 
-
-# try:
-shClient = SHClient("", "", "1234567890123456", LogPath, LogicPath)
-shClient.readFromBlockedSocket = True
-if shClient.run():
-    print("shclient run\n")
-    # for x in range(20):
-    pprint(shClient.requestAllDevicesState())
-    shClient.disconnect()
-# except:
-# print("No connection to shs server")
+# # try:
+# shClient = SHClient("", "", "1234567890123456", LogicPath)
+# shClient.readFromBlockedSocket = True
+# if shClient.run():
+#     print("shclient run\n")
+#     items = dict()
+#     for id in [789]:
+#         shClient.requestAllDevicesState(id)
+#         # from threading import Thread
+#         # shClient_thread = Thread(target=shClient.listener,args=[items])
+#         # shClient_thread.start()
+#         shClient.listener(items)
+#         # while True:
+#         #     time.sleep(1)
+#         #     pprint(items.keys())
+#     shClient.disconnect()
+# # except:
+# # print("No connection to shs server")

@@ -43,7 +43,24 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/DelItem"
+                                "$ref": "#/components/schemas/WsDelItem"
+                            }
+                        }
+                    },
+                    "required": true
+                }
+            }
+        },
+        "get_state": {
+            "post": {
+                "tags": ["ws api"],
+                "summary": "Get current state of item",
+                "operationId": "get_state",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/WsGetState"
                             }
                         }
                     },
@@ -95,6 +112,42 @@
                         "title": "Attributes and childs of added item in format key:value",
                         "type": "object"
                     }
+            }
+        },
+        "WsDelItem": {
+            "title": "Websocket Delete Item",
+            "required": [
+                "command",
+                "addr"
+            ],
+            "type": "object",
+            "properties": {
+                    "command": {
+                        "title": "Command for execute (input name function)",
+                        "type": "string"
+                    },
+                    "addr": {
+                            "title": "Address of item",
+                            "type": "string"
+                        }
+            }
+        },
+        "WsGetState": {
+            "title": "Websocket get state of item",
+            "required": [
+                "command",
+                "addr"
+            ],
+            "type": "object",
+            "properties": {
+                    "command": {
+                        "title": "Command for execute (input name function)",
+                        "type": "string"
+                    },
+                    "addr": {
+                            "title": "Address of item",
+                            "type": "string"
+                        }
             }
         }
     }
