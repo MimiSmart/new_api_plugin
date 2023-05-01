@@ -15,8 +15,11 @@ def get_items(logic: Logic, args):
     }
 
 
+def get_item(logic: Logic, args):
+    return logic.get_item(*args.values())
+
+
 def set_item(logic: Logic, args):
-    print(args)
     return logic.set_item(*args.values())
 
 
@@ -25,21 +28,7 @@ def del_item(logic: Logic, args):
 
 
 def get_state(logic: Logic, args):
-    return logic.state_items[args['addr']]
-    # if args['addr'] is list:
-    #     response = dict()
-    #     for addr in args['addr']:
-    #         try:
-    #             response[addr] = logic.state_items[addr]
-    #         except:
-    #             response[addr] = None
-    #     return response
-    # elif args['addr'] is str:
-    #     try:
-    #         response = logic.state_items[args['addr']]
-    #     except:
-    #         response = None
-    #     return response
+    return logic.get_state(*args.values())
 
 
 commands = {

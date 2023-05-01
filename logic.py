@@ -326,3 +326,20 @@ class Logic:
                 for tmp_item in tmp_items:
                     items.append(tmp_item)
         return [i for n, i in enumerate(items) if i not in items[:n]]  # убираем дубликаты
+
+    def get_state(self, data):
+        if isinstance(data,str):
+            data = [data]
+
+        response = dict()
+        msg = list()
+        for addr in data:
+            try:
+                response[addr] = self.state_items[addr]
+            except:
+                response[addr] = None
+                msg.append(addr)
+        if len(msg):
+            return {'type': 'response', 'data': response, 'message': 'Items ' + str(msg) + ' is not response'}
+        else:
+            return {'type': 'response', 'data': response}
