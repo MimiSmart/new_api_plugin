@@ -1,189 +1,351 @@
 {
-    "paths": {
-        "get_items": {
-            "get": {
-                "tags": ["ws api"],
-                "summary": "Get logic structure in json format",
-                "operationId": "get_items",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/WsGetItems"
-                            }
-                        }
-                    },
-                    "required": true
-                }
+  "paths": {
+    "get_items": {
+      "get": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Get logic structure in json format",
+        "operationId": "get_items",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsGetItems"
+              }
             }
-        },
-        "get_item": {
-            "get": {
-                "tags": ["ws api"],
-                "summary": "Get item in json format",
-                "operationId": "get_item",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/WsGetItem"
-                            }
-                        }
-                    },
-                    "required": true
-                }
-            }
-        },
-        "set_item": {
-            "post": {
-                "tags": ["ws api"],
-                "summary": "Write/append/remove item",
-                "operationId": "set_item",
-                "requestBody": {
-                    "content": {
-                        "json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/WsSetItem"
-                            }
-                        }
-                    },
-                    "required": true
-                }
-            }
-        },
-        "del_item": {
-            "delete": {
-                "tags": ["ws api"],
-                "summary": "Delete item",
-                "operationId": "del_item",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/WsDelItem"
-                            }
-                        }
-                    },
-                    "required": true
-                }
-            }
-        },
-        "get_state": {
-            "get": {
-                "tags": ["ws api"],
-                "summary": "Get current state of item",
-                "operationId": "get_state",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/WsGetState"
-                            }
-                        }
-                    },
-                    "required": true
-                }
-            }
+          },
+          "required": true
         }
+      }
     },
-    "schemas": {
-        "WsGetItems": {
-            "title": "Websocket Get Items",
-            "required": ["command"],
-            "type": "object",
-            "properties": {
-                "command": {
-                    "title": "Command for execute (input name function)",
-                    "type": "string"
-                }
+    "get_item": {
+      "get": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Get item in json format",
+        "operationId": "get_item",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsGetItem"
+              }
             }
-        },
-        "WsSetItem": {
-            "title": "Websocket Set Item",
-            "required": [
-                "command",
-                "type",
-                "tag",
-                "area",
-                "data"
-            ],
-            "type": "object",
-            "properties": {
-                    "command": {
-                        "title": "Command for execute (input name function)",
-                        "type": "string"
-                    },
-                    "type": {
-                            "title": "Operation type (write, append, remove)",
-                            "type": "string"
-                        },
-                    "tag": {
-                        "title": "Tag of item ('item', 'area', etc.)",
-                        "type": "string"
-                    },
-                    "area": {
-                        "title": "Name of area. if set item in root - set 'smart-house'",
-                        "type": "string"
-                    },
-                    "data": {
-                        "title": "Attributes and childs of added item in format key:value",
-                        "type": "object"
-                    }
-            }
-        },
-        "WsDelItem": {
-            "title": "Websocket Delete Item",
-            "required": [
-                "command",
-                "addr"
-            ],
-            "type": "object",
-            "properties": {
-                    "command": {
-                        "title": "Command for execute (input name function)",
-                        "type": "string"
-                    },
-                    "addr": {
-                            "title": "Address of item",
-                            "type": "string"
-                        }
-            }
-        },
-        "WsGetItem": {
-            "title": "Websocket Get Item",
-            "required": [
-                "command",
-                "addr"
-            ],
-            "type": "object",
-            "properties": {
-                    "command": {
-                        "title": "Command for execute (input name function)",
-                        "type": "string"
-                    },
-                    "addr": {
-                            "title": "Address of item",
-                            "type": "string"
-                        }
-            }
-        },
-        "WsGetState": {
-            "title": "Websocket get state of item",
-            "required": [
-                "command",
-                "addr"
-            ],
-            "type": "object",
-            "properties": {
-                    "command": {
-                        "title": "Command for execute (input name function)",
-                        "type": "string"
-                    },
-                    "addr": {
-                            "title": "Address of item or list addressess",
-                            "type": "string"
-                        }
-            }
+          },
+          "required": true
         }
+      }
+    },
+    "set_item": {
+      "post": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Write/append/remove item",
+        "operationId": "set_item",
+        "requestBody": {
+          "content": {
+            "json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsSetItem"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "del_item": {
+      "delete": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Delete item",
+        "operationId": "del_item",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsDelItem"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "get_state": {
+      "get": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Get current state of item",
+        "operationId": "get_state",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsGetState"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "subscribe": {
+      "post": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Subscribe for receive events",
+        "operationId": "subscribe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Subscribe"
+              },
+              "examples": {
+                "list_items": {
+                  "summary": "List of items",
+                  "description": "Example subscribe on a state of list of items",
+                  "value": {
+                    "command": "subscribe",
+                    "event_items": [
+                      "999:99",
+                      "999:98"
+                    ]
+                  }
+                },
+                "one_item": {
+                  "summary": "One item",
+                  "description": "Example subscribe on a state of item",
+                  "value": {
+                    "command": "subscribe",
+                    "event_items": "999:99"
+                  }
+                },
+                "all_items": {
+                  "summary": "All items",
+                  "description": "Example subscribe on a state of all items",
+                  "value": {
+                    "command": "subscribe",
+                    "event_items": "all"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "unsubscribe": {
+      "post": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Unsubscribe for not receive events",
+        "operationId": "unsubscribe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Unsubscribe"
+              },
+              "examples": {
+                "list_items": {
+                  "summary": "List of items",
+                  "description": "Example unsubscribe on a state of list of items",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_items": [
+                      "999:99",
+                      "999:98"
+                    ]
+                  }
+                },
+                "one_item": {
+                  "summary": "One item",
+                  "description": "Example unsubscribe on a state of item",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_items": "999:99"
+                  }
+                },
+                "all_items": {
+                  "summary": "All items",
+                  "description": "Example unsubscribe on a state of all items",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_items": "all"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
     }
+  },
+  "schemas": {
+    "WsGetItems": {
+      "title": "Websocket Get Items",
+      "required": [
+        "command"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        }
+      }
+    },
+    "WsSetItem": {
+      "title": "Websocket Set Item",
+      "required": [
+        "command",
+        "type",
+        "tag",
+        "area",
+        "data"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "type": {
+          "title": "Operation type (write, append, remove)",
+          "type": "string"
+        },
+        "tag": {
+          "title": "Tag of item ('item', 'area', etc.)",
+          "type": "string"
+        },
+        "area": {
+          "title": "Name of area. if set item in root - set 'smart-house'",
+          "type": "string"
+        },
+        "data": {
+          "title": "Attributes and childs of added item in format key:value",
+          "type": "object"
+        }
+      }
+    },
+    "WsDelItem": {
+      "title": "Websocket Delete Item",
+      "required": [
+        "command",
+        "addr"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "addr": {
+          "title": "Address of item",
+          "type": "string"
+        }
+      }
+    },
+    "WsGetItem": {
+      "title": "Websocket Get Item",
+      "required": [
+        "command",
+        "addr"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "addr": {
+          "title": "Address of item",
+          "type": "string"
+        }
+      }
+    },
+    "WsGetState": {
+      "title": "Websocket get state of item",
+      "required": [
+        "command",
+        "addr"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "addr": {
+          "title": "Address of item or list addressess",
+          "type": "string"
+        }
+      }
+    },
+    "Subscribe": {
+      "title": "Websocket subscribe on events",
+      "required": [
+        "command"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "event_items": {
+          "title": "Address of item or list addresses",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Unsubscribe": {
+      "title": "Websocket unsubscribe on events",
+      "required": [
+        "command"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "event_items": {
+          "title": "Address of item or list addresses",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
 }
