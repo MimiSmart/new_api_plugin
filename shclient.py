@@ -151,20 +151,26 @@ class SHClient():
                 s += struct.pack("B", value[i])
         return s
 
+    # ping to avoid kick by timeout
+    def ping(self):
+        print("Started ping SH")
+        while True:
+            self.requestAllDevicesState()
+            time.sleep(60)
+
     # get single device state
     def listener(self, items):
+
+        ping = Thread(target=self.ping)
+        ping.start()
+
         print("Started listen packets")
         while True:
             data = self.fread(10)
 
-            if not data["success"]:
-                return resultData
             unpackData = struct.unpack("L6B", data["data"])
 
             shHead = "".join(chr(char) for char in unpackData[1:])
-
-            # можно сделать в отдельном потоке постоянную мониторилку пакетов и с возможностью отдельно вызвать с id:subid для поиска нужного элемента
-            # проверить: если мониторить, и в это время параллельно отправить запрос то придет ли первой инфа по этому модулю
 
             if shHead != "" and unpackData[0] == 6:
                 continue
@@ -210,9 +216,6 @@ class SHClient():
                 # skip other packets
                 else:
                     ad = self.fread(dataLength)
-                    if not ad["success"]:
-                        return values
-        return values
 
     def readXmlLogic(self):
         xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
@@ -268,7 +271,7 @@ class SHClient():
                                 self.xmlFile) and os.path.getsize(self.xmlFile) != receivedFileSize)):
                         with open(self.xmlFile, "w") as f:
                             f.write(self.logicXml.decode('utf-8'))
-                        chmod(self.xmlFile, 0o666)
+                        # chmod(self.xmlFile, 0o666)
                 elif shHead == "messag":
                     message = self.fread(unpackData[0] - 6)
                     if not message["success"]:
