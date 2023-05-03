@@ -2,6 +2,7 @@ import os
 import socket
 import struct
 import time
+from threading import Thread
 
 # from time import time
 
@@ -9,7 +10,7 @@ LogPath = '/home/sh2/logs/log.txt'
 LogicPath = '/home/sh2/logic.xml'
 
 
-class SHClient():
+class SHClient:
     host = "127.0.0.1"
     port = "55555"
     aes = None
@@ -160,11 +161,11 @@ class SHClient():
 
     # get single device state
     def listener(self, items):
-
+        print("Started listen packets")
+        time.sleep(0.1)
         ping = Thread(target=self.ping)
         ping.start()
 
-        print("Started listen packets")
         while True:
             data = self.fread(10)
 

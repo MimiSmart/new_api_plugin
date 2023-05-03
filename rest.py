@@ -1,6 +1,7 @@
 # app.py
 import json
-from typing import List, Annotated
+from threading import Thread
+from typing import Annotated
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body
@@ -14,7 +15,17 @@ home_path = '/home/sh2/exe/new_api_plugin/'  # RELEASE
 
 logic: Logic = None
 app = FastAPI(title="MimiSmart API")
-manager = None
+
+
+@app.on_event("startup")
+async def startup_event():
+    global logic, subscribes
+    print('fastapi started')
+    ws_event_listener_thread = Thread(target=ws.event_listener,
+                                      args=[logic, subscribes],
+                                      name='ws subscribe events')
+    ws_event_listener_thread.start()
+    print('Websocket event listener for subscribers started')
 
 
 @app.get("/logic/get/xml", tags=['rest api'], summary="Get logic in xml")
@@ -31,7 +42,6 @@ def get_logic_obj():
          response_description='Return dictionary of item attributes',
          summary="Get item if json format")
 def get_item(addr: str):
-    print(item)
     return logic.get_item(addr)
 
 
@@ -51,28 +61,34 @@ def del_item(item: Annotated[DelItem, Body(example={"addr": "999:99"}, ),], ):
     return logic.del_item(item.addr)
 
 
-@app.post("/item/get_state/{addr}", tags=['rest api'], response_description='Return string of bytes state',
-          summary="Get current state of item")
+@app.get("/item/get_state/{addr}", tags=['rest api'], response_description='Return string of bytes state',
+         summary="Get current state of item")
 def get_state(addr: str):
     return logic.get_state(addr)
 
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
+@app.get("/item/get_all_states/", tags=['rest api'], response_description='Return string of bytes state',
+         summary="Get all current states of item")
+def get_all_states():
+    return logic.get_all_states()
 
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
 
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+subscribes = list()
+
+
+def find_index(subscribes, websocket):
+    for cntr in range(len(subscribes)):
+        if subscribes[cntr].websocket == websocket:
+            return cntr
 
 
 @app.websocket("/")
 async def websocket_endpoint(websocket: WebSocket):
-    global manager
-    await manager.connect(websocket)
+    global subscribes
+
+    subscribes.append(ws.SubscribeWebsocket(websocket))
+    await websocket.accept()
+
     try:
         while True:
             data = await websocket.receive_text()
@@ -80,9 +96,13 @@ async def websocket_endpoint(websocket: WebSocket):
                 data = json.loads(data)
                 # check if exists command
                 if data['command'] in ws.commands:
-                    cmd = data['command']
-                    data.pop('command')
-                    reply = ws.commands[cmd](logic, data)
+
+                    if data['command'] == 'subscribe' or data['command'] == 'unsubscribe':
+                        reply = ws.subscriber(logic, subscribes, find_index(subscribes, websocket), data)
+                    else:
+                        cmd = data['command']
+                        data.pop('command')
+                        reply = ws.commands[cmd](logic, data)
                 else:
                     reply = {'type': 'error', 'message': 'Command not found!'}
             except:
@@ -90,13 +110,12 @@ async def websocket_endpoint(websocket: WebSocket):
             reply = json.dumps(reply, ensure_ascii=False)
             await websocket.send_text(reply)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
+        subscribes.pop(find_index(subscribes, websocket))
 
 
 def run(host, port, _logic: Logic):
-    global app, logic, manager
+    global app, logic
     logic = _logic
-    manager = ConnectionManager()
 
     # load ws schemas for openapi docs
     with open(home_path + 'websocket_schema.json') as f:

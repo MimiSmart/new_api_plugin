@@ -18,7 +18,7 @@ with open(home_path + 'config') as f:
     config = json.load(f)
 
 # config['logic_path'] = 'logic.xml'  # DEBUG
-# config['local_ip'] = '192.168.1.101'  # DEBUG
+# config['local_ip'] = '192.168.1.106'  # DEBUG
 # ---------read logic--------------
 logic = Logic(config['logic_path'])
 
@@ -26,9 +26,20 @@ logic = Logic(config['logic_path'])
 shClient = SHClient("", "", config['key'], config['logic_path'])
 shClient.readFromBlockedSocket = True
 if shClient.run():
-    shClient_thread = Thread(target=shClient.listener, args=[logic.status_items])
+    shClient_thread = Thread(target=shClient.listener, args=[logic.state_items], name='shclient')
     shClient_thread.start()
     shClient.requestAllDevicesState()
 
 # -------run rest & ws-------------
 rest.run(config['local_ip'], config['port'], logic)
+# import ws
+#
+# response = ws.set_item(logic, {"type": "write",
+#                                "tag": "item",
+#                                "area": "Setup9",
+#                                "data": {"name": "test item", "addr": "588:8"}})
+# logic.set_item('append', 'item', 'Setup9', {'name': 'Temperature', 'addr': '588:8'})
+# logic.set_item('remove', 'item', 'Setup9', {'addr': '588:8', 'name': ''})
+# response = logic.set_item('write', 'item', 'Гостиная', {'name':'test item','test': 'test', 'addr': '588:8'})
+# areas = logic.find_all_items(logic.obj_logic,'area')
+# items = logic.find_all_items(logic.obj_logic, 'item')

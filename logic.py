@@ -13,8 +13,10 @@ class Logic:
     crc16 = 0
     updater = None
     state_items = dict()
-    event_list = []  # list of addressess of items with update logic event
 
+    # state_items = {'524:249':{'state':'01'}}#debug
+
+    # event_list = []  # list of addressess of items with update logic event
     def __init__(self, path_logic):
         self.path_logic = path_logic
         data = self.get_xml()
@@ -51,7 +53,7 @@ class Logic:
             if tag != 'item' or 'addr' not in data:
                 return {'type': 'error', 'message': 'Append works only for items with addr'}
             # берем список item и редачим нужный. данные линкуются в общую структуру
-            items = self._find_all_items(self.obj_logic, tag)
+            items = self.find_all_items(self.obj_logic, tag)
             for item in items:
                 if item['addr'] == data['addr']:
                     for key, value in data.items():
@@ -63,7 +65,7 @@ class Logic:
             if tag != 'item' or 'addr' not in data:
                 return {'type': 'error', 'message': 'Remove works only for items with addr'}
             # берем список item и редачим нужный. данные линкуются в общую структуру
-            items = self._find_all_items(self.obj_logic, tag)
+            items = self.find_all_items(self.obj_logic, tag)
             for item in items:
                 if item['addr'] == data['addr']:
                     for key in data.keys():
@@ -75,7 +77,7 @@ class Logic:
             # если есть адрес - проще всего по нему найти
             if 'addr' in data:
                 # берем список item и редачим нужный. данные линкуются в общую структуру
-                items = self._find_all_items(self.obj_logic, tag)
+                items = self.find_all_items(self.obj_logic, tag)
                 for cntr in range(len(items)):
                     if items[cntr]['addr'] == data['addr']:
                         # копируем новое и удаляем лишние старые ключи
@@ -91,7 +93,7 @@ class Logic:
             if area_name == 'smart-house':
                 area = self.obj_logic['smart-house']
             else:
-                areas = self._find_all_items(self.obj_logic, 'area')
+                areas = self.find_all_items(self.obj_logic, 'area')
                 for x in areas:
                     if x['name'] == area_name:
                         area = x
@@ -290,7 +292,7 @@ class Logic:
             # не забыть что и на отдельные итемы тоже обнову ннадо делать
 
             # data = self.get_dict()
-            # data2 = self._find_all_items(data)
+            # data2 = self.find_all_items(data)
             # crc_items = dict()
             # for item in data2:
             #     crc_items [item['@addr']] =
@@ -298,7 +300,7 @@ class Logic:
             self.obj_logic = self.get_dict()
             self.crc16 = new_crc
 
-    def _find_all_items(self, data, tag='item'):
+    def find_all_items(self, data, tag='item'):
         items = []
         if type(data) is dict:
             for key in data.keys():
@@ -308,27 +310,27 @@ class Logic:
                     if type(data[tag]) is list:
                         for item in data[tag]:
                             items.append(item)
-                            tmp_items = self._find_all_items(item, tag)
+                            tmp_items = self.find_all_items(item, tag)
                             for tmp_item in tmp_items:
                                 items.append(tmp_item)
                     else:
                         items.append(data[tag])
                 # если тэга на этом уровне не нашли, то пытаемся поискать внутри data[key]
                 else:
-                    tmp_items = self._find_all_items(data[key], tag)
+                    tmp_items = self.find_all_items(data[key], tag)
                     for tmp_item in tmp_items:
                         items.append(tmp_item)
         # если нам изначально пришел не dict, а list (это должно происходить только в процессе рекурсии)
         elif type(data) is list:
             for part in data:
                 # то ищем внутри каждого элемента
-                tmp_items = self._find_all_items(part, tag)
+                tmp_items = self.find_all_items(part, tag)
                 for tmp_item in tmp_items:
                     items.append(tmp_item)
         return [i for n, i in enumerate(items) if i not in items[:n]]  # убираем дубликаты
 
     def get_state(self, data):
-        if isinstance(data,str):
+        if isinstance(data, str):
             data = [data]
 
         response = dict()
@@ -343,3 +345,6 @@ class Logic:
             return {'type': 'response', 'data': response, 'message': 'Items ' + str(msg) + ' is not response'}
         else:
             return {'type': 'response', 'data': response}
+
+    def get_all_states(self):
+        return {'type': 'response', 'data': self.state_items}
