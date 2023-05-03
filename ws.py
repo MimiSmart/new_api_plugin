@@ -85,10 +85,15 @@ def subscriber(logic: Logic, subscribes, index, args):
             msg['event_msg'] = 'Unsubscribe success'
     if 'event_items' in args:
         msg['event_items'] = ''
+        if isinstance(args['event_items'], str) and args['event_items'] != 'all':
+            args['event_items'] = [args['event_items']]
         if isinstance(args['event_items'], list):
             if args['command'] == 'subscribe':
+                items = logic.find_all_items(logic.obj_logic)
+                items = [item['addr'] for item in items]
                 for item in args['event_items']:
-                    subscribes[index].event_items.append(item)
+                    if item in items:
+                        subscribes[index].event_items.append(item)
                     # добавить проверку существует ли итем в логике
                 # remove duplicates
                 subscribes[index].event_items = \
