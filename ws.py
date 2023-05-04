@@ -160,7 +160,7 @@ def event_listener(logic: Logic, subscribes):
                         new_state = logic.state_items[addr]['state']
                         # if new state not equal old state, then send event
                         if addr not in old_states or old_states[addr] != new_state:
-                            msg[addr] = new_state
+                            msg[addr] = new_state.hex(' ')
                 # упаковываем все однотипные ивенты в 1 пакет
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "state_item",

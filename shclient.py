@@ -202,8 +202,8 @@ class SHClient:
                         data = self.fread(length)
                         dataLength -= length
 
-                        # items[addr] = {'state': data["data"], 'timestamp': int(time.time())}
-                        items[addr] = {'state': data["data"].hex(' ')}
+                        # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
+                        items[addr] = {'state': data["data"]}
 
                         # print("addr:%s\tstate:%s" % (addr, data["data"].hex(' ')))
                 elif PD == 7:
@@ -211,7 +211,7 @@ class SHClient:
                     # print("data:", data['data'].hex(' '))
                     addr = str(senderId) + ':' + str(senderSubId)
                     # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
-                    items[addr] = {'state': data["data"].hex(' ')}
+                    items[addr] = {'state': data["data"]}
 
                     # print("addr:%s\tstate:%s"%(addr,data["data"].hex(' ')))
                 # skip other packets
