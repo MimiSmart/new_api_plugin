@@ -2,9 +2,17 @@ import asyncio
 import json
 import time
 
-from fastapi import WebSocket
+from fastapi import WebSocket, WebSocketDisconnect
 
 from logic import Logic
+
+subscribes = list()
+logic: Logic = None
+
+
+def init_logic(_logic: Logic):
+    global logic
+    logic = _logic
 
 
 def test(logic: Logic, args):
@@ -66,7 +74,8 @@ class SubscribeWebsocket:
         self.event_msg = event_msg
 
 
-def subscriber(logic: Logic, subscribes, index, args):
+def subscriber(index, args):
+    global subscribes, logic
     msg = {'type': 'response'}
 
     if 'event_logic' in args:
@@ -94,7 +103,6 @@ def subscriber(logic: Logic, subscribes, index, args):
                 for item in args['event_items']:
                     if item in items:
                         subscribes[index].event_items.append(item)
-                    # добавить проверку существует ли итем в логике
                 # remove duplicates
                 subscribes[index].event_items = \
                     list(set(subscribes[index].event_items))
@@ -144,7 +152,49 @@ async def send_message(websocket, message):
         await websocket.send_text(message)
 
 
-def event_listener(logic: Logic, subscribes):
+def find_index(websocket):
+    global subscribes
+    for cntr in range(len(subscribes)):
+        if subscribes[cntr].websocket == websocket:
+            return cntr
+
+
+async def endpoint(websocket: WebSocket):
+    global subscribes, commands, logic
+    # добавление нового коннекшна
+    subscribes.append(SubscribeWebsocket(websocket))
+    await websocket.accept()
+    # --------------------------------
+    try:
+        # обработка сообщений от клиента
+        while True:
+            data = await websocket.receive_text()
+            try:
+                data = json.loads(data)
+                # check if exists command
+                if data['command'] in commands:
+
+                    if data['command'] == 'subscribe' or data['command'] == 'unsubscribe':
+                        reply = subscriber(find_index(websocket), data)
+                    else:
+                        cmd = data['command']
+                        data.pop('command')
+                        reply = commands[cmd](logic, data)
+                else:
+                    reply = {'type': 'error', 'message': 'Command not found!'}
+            except:
+                reply = {'type': 'error', 'message': 'Invalid json!'}
+            reply = json.dumps(reply, ensure_ascii=False)
+            await websocket.send_text(reply)
+    # disconnect client
+    except WebSocketDisconnect:
+        subscribes.pop(find_index(websocket))
+
+
+def listener():
+    print('Websocket event listener for subscribers started')
+    return
+    global subscribes, logic
     old_states = dict()
     while True:
         length = len(subscribes)
@@ -173,7 +223,7 @@ def event_listener(logic: Logic, subscribes):
         for key, value in logic.state_items.items():
             old_states[key] = value['state']
 
-        time.sleep(1)
+        time.sleep(0.3)
 
 
 commands = {

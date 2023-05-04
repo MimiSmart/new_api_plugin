@@ -1,12 +1,8 @@
 # app.py
-import json
-from threading import Thread
 from typing import Annotated
 
-import uvicorn
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Body
+from fastapi import FastAPI, Body
 
-import ws
 from api_models import *
 from logic import Logic
 
@@ -17,15 +13,9 @@ logic: Logic = None
 app = FastAPI(title="MimiSmart API")
 
 
-@app.on_event("startup")
-async def startup_event():
-    global logic, subscribes
-    print('fastapi started')
-    ws_event_listener_thread = Thread(target=ws.event_listener,
-                                      args=[logic, subscribes],
-                                      name='ws subscribe events')
-    ws_event_listener_thread.start()
-    print('Websocket event listener for subscribers started')
+def init_logic(_logic: Logic):
+    global logic
+    logic = _logic
 
 
 @app.get("/logic/get/xml", tags=['rest api'], summary="Get logic in xml")
@@ -71,59 +61,3 @@ def get_state(addr: str):
          summary="Get all current states of item")
 def get_all_states():
     return logic.get_all_states()
-
-
-subscribes = list()
-
-
-def find_index(subscribes, websocket):
-    for cntr in range(len(subscribes)):
-        if subscribes[cntr].websocket == websocket:
-            return cntr
-
-
-@app.websocket("/")
-async def websocket_endpoint(websocket: WebSocket):
-    global subscribes
-
-    subscribes.append(ws.SubscribeWebsocket(websocket))
-    await websocket.accept()
-
-    try:
-        while True:
-            data = await websocket.receive_text()
-            try:
-                data = json.loads(data)
-                # check if exists command
-                if data['command'] in ws.commands:
-
-                    if data['command'] == 'subscribe' or data['command'] == 'unsubscribe':
-                        reply = ws.subscriber(logic, subscribes, find_index(subscribes, websocket), data)
-                    else:
-                        cmd = data['command']
-                        data.pop('command')
-                        reply = ws.commands[cmd](logic, data)
-                else:
-                    reply = {'type': 'error', 'message': 'Command not found!'}
-            except:
-                reply = {'type': 'error', 'message': 'Invalid json!'}
-            reply = json.dumps(reply, ensure_ascii=False)
-            await websocket.send_text(reply)
-    except WebSocketDisconnect:
-        subscribes.pop(find_index(subscribes, websocket))
-
-
-def run(host, port, _logic: Logic):
-    global app, logic
-    logic = _logic
-
-    # load ws schemas for openapi docs
-    with open(home_path + 'websocket_schema.json') as f:
-        openapi = app.openapi()
-        tmp = json.load(f)
-        for key, value in tmp['paths'].items():
-            openapi['paths'][key] = value
-        for key, value in tmp['schemas'].items():
-            openapi['components']['schemas'][key] = value
-
-    uvicorn.run(app, host=host, port=port)

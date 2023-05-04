@@ -162,9 +162,6 @@ class SHClient:
     # get single device state
     def listener(self, items):
         print("Started listen packets")
-        time.sleep(0.1)
-        ping = Thread(target=self.ping)
-        ping.start()
 
         while True:
             data = self.fread(10)
