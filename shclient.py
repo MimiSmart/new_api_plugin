@@ -2,7 +2,6 @@ import os
 import socket
 import struct
 import time
-from threading import Thread
 
 # from time import time
 
@@ -119,7 +118,12 @@ class SHClient:
         res = bytes()
         if self.readFromBlockedSocket:
             while (size - len(res)) > 0:
-                res += self.connectionResource.recvfrom(size - len(res))[0]
+                response = self.connectionResource.recvfrom(size - len(res))[0]
+                # len data equal 0 if server disconnect
+                if not len(response):
+                    print('SHclient disconnected')
+                    exit(0)
+                res += response
         else:
             self.connectionResource.setblocking(False)  # set socket to nonblock status
             while (size - len(res)) > 0:
@@ -152,73 +156,73 @@ class SHClient:
                 s += struct.pack("B", value[i])
         return s
 
-    # ping to avoid kick by timeout
-    def ping(self):
-        print("Started ping SH")
-        while True:
-            self.requestAllDevicesState()
-            time.sleep(60)
-
     # get single device state
     def listener(self, items):
         print("Started listen packets")
-
+        cntr = 0
         while True:
-            data = self.fread(10)
-
-            unpackData = struct.unpack("L6B", data["data"])
-
-            shHead = "".join(chr(char) for char in unpackData[1:])
-
-            if shHead != "" and unpackData[0] == 6:
-                continue
-            if shHead == "shcxml":
-                line = self.fread(unpackData[0])
-                continue
-            elif shHead == "messag":
-                message = self.fread(unpackData[0] - 6)
-                continue
+            # ping server to avoid kick by timeout
+            if cntr >= 60:
+                self.requestAllDevicesState()
+                cntr = 0
             else:
-                senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH", data["data"])
-                # print("senderId: ", senderId)
-                # print("destId: ", destId)
-                # print("PD:", PD)
-                # print("transid:", transid)
-                # print("senderSubId:", senderSubId)
-                # print("destSubId:", destSubId)
-                # print("dataLength:", dataLength)
+                cntr += 1
+                data = self.fread(10)
 
-                if PD == 15:
-                    while dataLength > 0:
-                        line = self.fread(2)
-                        dataLength -= 2
+                unpackData = struct.unpack("L6B", data["data"])
 
-                        subid, length = struct.unpack("2B", line["data"])
-                        addr = str(senderId) + ':' + str(subid)
+                shHead = "".join(chr(char) for char in unpackData[1:])
 
-                        data = self.fread(length)
-                        dataLength -= length
+                if shHead != "" and unpackData[0] == 6:
+                    continue
+                if shHead == "shcxml":
+                    line = self.fread(unpackData[0])
+                    continue
+                elif shHead == "messag":
+                    message = self.fread(unpackData[0] - 6)
+                    continue
+                else:
+                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
+                                                                                                      data["data"])
+                    # print("senderId: ", senderId)
+                    # print("destId: ", destId)
+                    # print("PD:", PD)
+                    # print("transid:", transid)
+                    # print("senderSubId:", senderSubId)
+                    # print("destSubId:", destSubId)
+                    # print("dataLength:", dataLength)
 
+                    if PD == 15:
+                        while dataLength > 0:
+                            line = self.fread(2)
+                            dataLength -= 2
+
+                            subid, length = struct.unpack("2B", line["data"])
+                            addr = str(senderId) + ':' + str(subid)
+
+                            data = self.fread(length)
+                            dataLength -= length
+
+                            # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
+                            items[addr] = {'state': data["data"]}
+
+                            # print("addr:%s\tstate:%s" % (addr, data["data"].hex(' ')))
+                    elif PD == 7:
+                        data = self.fread(dataLength)
+                        # print("data:", data['data'].hex(' '))
+                        addr = str(senderId) + ':' + str(senderSubId)
                         # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
                         items[addr] = {'state': data["data"]}
 
-                        # print("addr:%s\tstate:%s" % (addr, data["data"].hex(' ')))
-                elif PD == 7:
-                    data = self.fread(dataLength)
-                    # print("data:", data['data'].hex(' '))
-                    addr = str(senderId) + ':' + str(senderSubId)
-                    # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
-                    items[addr] = {'state': data["data"]}
-
-                    # print("addr:%s\tstate:%s"%(addr,data["data"].hex(' ')))
-                # skip other packets
-                else:
-                    ad = self.fread(dataLength)
+                        # print("addr:%s\tstate:%s"%(addr,data["data"].hex(' ')))
+                    # skip other packets
+                    else:
+                        ad = self.fread(dataLength)
 
     def readXmlLogic(self):
         xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
         if self.allowRetraslateUDP:
-            xml += "<get-shc retranslate-udp=\"yes\" />\n"
+            xml += "<get-shc retranslate-udp=\"yes\"  />\n"
         else:
             xml += "<get-shc />\n"
         xml += "</smart-house-commands>\n"

@@ -51,43 +51,42 @@ shClient = SHClient("", "", config['key'], config['logic_path'])
 shClient.readFromBlockedSocket = True
 
 threads.append(Thread(target=shClient.listener, args=[logic.state_items], name='shclient', daemon=True))
-threads.append(Thread(target=shClient.ping, name='ping SH', daemon=True))
 
 if shClient.run():
-    print('Thread [1/4] starting...')
+    print('Thread [1/3] starting...')
     threads[0].start()
     # shClient.requestAllDevicesState()
     time.sleep(0.1)
-    print('Thread [2/4] starting...')
-    threads[1].start()
+else:
+    print('Error start SHclient')
 # -------run rest & ws-------------
 threads.append(Thread(target=server_run, args=[config['local_ip'], config['port']], name='server'))
-print('Thread [3/4] starting...')
-threads[2].start()
+print('Thread [2/3] starting...')
+threads[1].start()
 # rest.run(config['local_ip'], config['port'], logic)
 
 time.sleep(1)
 
 threads.append(Thread(target=ws.listener, name='ws subscribe events', daemon=True))
-print('Thread [4/4] starting...')
-threads[3].start()
+print('Thread [3/3] starting...')
+threads[2].start()
 
 # проверяем раз в 5 сек живы ли потоки, если нет, то перезапускаем нужный
 while True:
     if not threads[0].is_alive():
         shClient = SHClient("", "", config['key'], config['logic_path'])
         shClient.readFromBlockedSocket = True
-        threads[0] = Thread(target=shClient.listener, args=[logic.state_items], name='shclient', daemon=True)
-        threads[0].start()
+        if shClient.run():
+            threads[0] = Thread(target=shClient.listener, args=[logic.state_items], name='shclient', daemon=True)
+            threads[0].start()
+        else:
+            print('Error start SHclient')
     if not threads[1].is_alive():
-        threads[1] = Thread(target=shClient.ping, name='ping SH', daemon=True)
+        threads[1] = Thread(target=server_run, args=[config['local_ip'], config['port']], name='server')
         threads[1].start()
     if not threads[2].is_alive():
-        threads[2] = Thread(target=server_run, args=[config['local_ip'], config['port']], name='server')
+        threads[2] = Thread(target=ws.listener, name='ws subscribe events', daemon=True)
         threads[2].start()
-    if not threads[3].is_alive():
-        threads[3] = Thread(target=ws.listener, name='ws subscribe events', daemon=True)
-        threads[3].start()
     time.sleep(5)
 
 # BROKEN PIPE ERROR 32 IN SHCLIENT:
