@@ -10,8 +10,10 @@ LogicPath = '/home/sh2/logic.xml'
 
 
 class SHClient:
-    host = "127.0.0.1"
-    port = "55555"
+    host = "127.0.0.1"  # RELEASE
+    # host='89.17.55.74' # DEBUG
+    port = "55555"  # RELEASE
+    # port = "57778" # DEBUG
     aes = None
     aeskey = ""
     initClientDefValue = 0x7ef
@@ -221,10 +223,13 @@ class SHClient:
 
     def readXmlLogic(self):
         xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
+        # параметр mac-id определяет какой id выдаст сервер
         if self.allowRetraslateUDP:
-            xml += "<get-shc retranslate-udp=\"yes\"  />\n"
+            xml += "<get-shc retranslate-udp=\"yes\" mac-id=\"6234567890123456\"/>\n"
         else:
-            xml += "<get-shc />\n"
+            xml += "<get-shc mac-id=\"6234567890123456\"/>\n"
+        # xml += '<get-shc keep-push="yes" crc32="0xD74D316D" mac-id="d66526a68c9718e9" current-id="45" retranslate-udp-optim="yes" remote-connection="yes" os-type="1" os-ver="33.0" send-ping-to="20" set-ping-to="30" resend="get-shc" srv-serial="61a4cce3" need-ip-ids="yes"/>'+"\n"
+
         xml += "</smart-house-commands>\n"
         xmlsize = len(xml)
         data = struct.pack("L", xmlsize) + xml.encode('utf-8')
@@ -268,12 +273,12 @@ class SHClient:
                     self.logicXml.replace(b'&', b'&amp')
                     self.logicXml.replace(b'#amp', b'&amp')
 
-                    if self.xmlFile != "" and self.saveXmlLogic and (not os.path.exists(self.xmlFile)
-                                                                     or (os.path.exists(
-                                self.xmlFile) and os.path.getsize(self.xmlFile) != receivedFileSize)):
-                        with open(self.xmlFile, "w") as f:
-                            f.write(self.logicXml.decode('utf-8'))
-                        # chmod(self.xmlFile, 0o666)
+                    # if self.xmlFile != "" and self.saveXmlLogic and (not os.path.exists(self.xmlFile)
+                    #                                                  or (os.path.exists(
+                    #             self.xmlFile) and os.path.getsize(self.xmlFile) != receivedFileSize)):
+                    # with open(self.xmlFile, "w") as f:
+                    # f.write(self.logicXml.decode('utf-8'))
+                    # chmod(self.xmlFile, 0o666)
                 elif shHead == "messag":
                     message = self.fread(unpackData[0] - 6)
                     if not message["success"]:
