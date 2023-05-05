@@ -193,7 +193,6 @@ async def endpoint(websocket: WebSocket):
 
 def listener():
     print('Websocket event listener for subscribers started')
-    return
     global subscribes, logic
     old_states = dict()
     while True:
