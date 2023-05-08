@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 from collections import defaultdict
 from xml.etree import cElementTree as ET
 
@@ -11,19 +12,21 @@ class Logic:
     xml_logic = ""
     obj_logic = None
     crc16 = 0
-    updater = None
     state_items = dict()
+    logic_update = False
+    item_crc = dict()
+    item_update = dict()
 
-    # state_items = {'524:249':{'state':'01'}}#debug
-
-    # event_list = []  # list of addressess of items with update logic event
     def __init__(self, path_logic):
         self.path_logic = path_logic
-        data = self.get_xml()
-        self.crc16 = self.checksum(data)
+        self.get_xml()
+        self.crc16 = self.checksum()
         self.obj_logic = self.get_dict()
-
-        # self.updater = Thread(target=self.update())
+        items = self.find_all_items()
+        # items = [item['addr'] for item in items] # get list addr of items
+        for item in items:
+            self.item_crc[item['addr']] = self.checksum(json.dumps(item))
+            self.item_update[item['addr']] = False
 
     def get_xml(self):
         with open(self.path_logic, 'rb') as f:
@@ -53,7 +56,7 @@ class Logic:
             if tag != 'item' or 'addr' not in data:
                 return {'type': 'error', 'message': 'Append works only for items with addr'}
             # берем список item и редачим нужный. данные линкуются в общую структуру
-            items = self.find_all_items(self.obj_logic, tag)
+            items = self.find_all_items(tag=tag)
             for item in items:
                 if item['addr'] == data['addr']:
                     for key, value in data.items():
@@ -65,7 +68,7 @@ class Logic:
             if tag != 'item' or 'addr' not in data:
                 return {'type': 'error', 'message': 'Remove works only for items with addr'}
             # берем список item и редачим нужный. данные линкуются в общую структуру
-            items = self.find_all_items(self.obj_logic, tag)
+            items = self.find_all_items(tag=tag)
             for item in items:
                 if item['addr'] == data['addr']:
                     for key in data.keys():
@@ -77,7 +80,7 @@ class Logic:
             # если есть адрес - проще всего по нему найти
             if 'addr' in data:
                 # берем список item и редачим нужный. данные линкуются в общую структуру
-                items = self.find_all_items(self.obj_logic, tag)
+                items = self.find_all_items(tag=tag)
                 for cntr in range(len(items)):
                     if items[cntr]['addr'] == data['addr']:
                         # копируем новое и удаляем лишние старые ключи
@@ -93,7 +96,7 @@ class Logic:
             if area_name == 'smart-house':
                 area = self.obj_logic['smart-house']
             else:
-                areas = self.find_all_items(self.obj_logic, 'area')
+                areas = self.find_all_items(tag='area')
                 for x in areas:
                     if x['name'] == area_name:
                         area = x
@@ -278,15 +281,26 @@ class Logic:
         reparsed = minidom.parseString(rough_string)
         return reparsed.toprettyxml(indent="".join(["\t"]))
 
-    def checksum(self, data):
-        calculator = Calculator(Crc16.CCITT, optimized=True)
-        return calculator.checksum(data)
+    def checksum(self, data=None):
+        # if data is None - calculate checksum for logic.xml file
+        import subprocess
+        crc = 0
+        if data is None:
+            buffer = subprocess.run('./crc16/crc16 file '+self.path_logic, shell=True, capture_output=True)
+        else:
+            buffer = subprocess.run('./crc16/crc16 string \'' + data + '\'', shell=True, capture_output=True)
+        crc = buffer.stdout.decode('utf-8')
+        crc = int(crc, 16)
+        # print(hex(crc))
+
+        return crc
 
     # Thread
     def update(self):
         data = self.get_xml()
         new_crc = self.checksum(data)
         if new_crc != self.crc16:
+
             # if True:
             # тут будет триггериться ивент на обновление логики клиентам
             # не забыть что и на отдельные итемы тоже обнову ннадо делать
@@ -300,7 +314,9 @@ class Logic:
             self.obj_logic = self.get_dict()
             self.crc16 = new_crc
 
-    def find_all_items(self, data, tag='item'):
+    def find_all_items(self, data=None, tag='item'):
+        if data is None:
+            data = self.obj_logic
         items = []
         if type(data) is dict:
             for key in data.keys():
