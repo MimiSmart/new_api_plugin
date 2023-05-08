@@ -130,10 +130,63 @@
                 },
                 "all_items": {
                   "summary": "All items",
-                  "description": "Example subscribe on a state of all items",
+                  "description": "Example subscribe on a state of all items. If the client subscribed to the state of all items, and then a new item was added to the logic, the client will not receive the state of this new element.",
                   "value": {
                     "command": "subscribe",
                     "event_items": "all"
+                  }
+                },
+                "all_updates": {
+                  "summary": "All logic updates",
+                  "description": "Example subscribe on all updates logic and items.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_logic": "all"
+                  }
+                },
+                "list_items_updates": {
+                  "summary": "List items updates",
+                  "description": "Example subscribe on updates list of items.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_logic": {
+                      "items": [
+                        "999:99",
+                        "999:98"
+                      ]
+                    }
+                  }
+                },
+                "one_item_update": {
+                  "summary": "One item updates",
+                  "description": "Example subscribe on updates one item.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_logic": {
+                      "items": "999:99"
+                    }
+                  }
+                },
+                "items_and_logic_updates": {
+                  "summary": "List of items and logic updates",
+                  "description": "Example subscribe on updates logic and list of items.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_logic": {
+                      "logic": true,
+                      "items": ["999:99"]
+                    }
+                  }
+                },
+                "logic_updates_in_xml": {
+                  "summary": "Logic updates in xml format",
+                  "description": "Example subscribe on updates logic in xml format.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_logic": {
+                      "logic": true,
+                      "response_type":"xml"
+                    }
                   }
                 }
               }
@@ -182,6 +235,59 @@
                   "value": {
                     "command": "unsubscribe",
                     "event_items": "all"
+                  }
+                },
+                "all_updates": {
+                  "summary": "All logic updates",
+                  "description": "Example subscribe on all updates logic and items.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_logic": "all"
+                  }
+                },
+                "list_items_updates": {
+                  "summary": "List items updates",
+                  "description": "Example unsubscribe on updates list of items.",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_logic": {
+                      "items": [
+                        "999:99",
+                        "999:98"
+                      ]
+                    }
+                  }
+                },
+                "one_item_update": {
+                  "summary": "One item updates",
+                  "description": "Example unsubscribe on updates one item.",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_logic": {
+                      "items": "999:99"
+                    }
+                  }
+                },
+                "items_and_logic_updates": {
+                  "summary": "List of items and logic updates",
+                  "description": "Example unsubscribe on updates logic and list of items.",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_logic": {
+                      "logic": true,
+                      "items": ["999:99"]
+                    }
+                  }
+                },
+                "logic_updates_in_xml": {
+                  "summary": "Logic updates in xml format",
+                  "description": "Example unsubscribe on updates logic in xml format.",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_logic": {
+                      "logic": true,
+                      "response_type":"xml"
+                    }
                   }
                 }
               }
@@ -317,6 +423,20 @@
               }
             }
           ]
+        },
+        "event_logic": {
+          "title": "'items':Address of item or list addresses,'logic':True/false",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
         }
       }
     },
@@ -333,6 +453,20 @@
         },
         "event_items": {
           "title": "Address of item or list addresses",
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "event_logic": {
+          "title": "'items':Address of item or list addresses,'logic':True/false",
           "anyOf": [
             {
               "type": "string"
