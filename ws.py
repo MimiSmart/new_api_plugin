@@ -63,7 +63,7 @@ class SubscribeWebsocket:
                  event_msg: bool = False):
         self.websocket = websocket
         if event_logic is None:
-            self.event_logic = {'logic': False, 'items': []}
+            self.event_logic = {'logic': False, 'response_type': [], 'items': []}
         else:
             self.event_logic = event_logic
         if event_items is None:
@@ -85,7 +85,7 @@ def subscriber(index, args):
         msg['event_logic'] = ''
         # if event_logic is 'all', then make dict with subscribe all
         if isinstance(args['event_logic'], str):
-            args['event_logic'] = {'logic': True, 'items': 'all'}
+            args['event_logic'] = {'logic': True, 'response_type': ['json', 'xml'], 'items': 'all'}
         if isinstance(args['event_logic'], dict):
             if 'logic' in args['event_logic'] and args['event_logic']['logic']:
                 if args['command'] == 'subscribe':
@@ -95,6 +95,27 @@ def subscriber(index, args):
                 else:
                     subscribes[index].event_logic['logic'] = False
                     msg['event_logic'] += "Unsubscribe logic success\n"
+            if 'response_type' in args['event_logic']:
+                if isinstance(args['event_logic']['response_type'], str):
+                    args['event_logic']['response_type'] = [args['event_logic']['response_type']]
+                if args['command'] == 'subscribe':
+                    for response_type in args['event_logic']['response_type']:
+                        if response_type not in subscribes[index].event_logic['response_type']:
+                            subscribes[index].event_logic['response_type'].append(response_type)
+                # unsubscribe
+                else:
+                    for response_type in args['event_logic']['response_type']:
+                        if response_type not in subscribes[index].event_logic['response_type']:
+                            subscribes[index].event_logic['response_type'].remove(response_type)
+                    if not len(subscribes[index].event_logic['response_type']):
+                        subscribes[index].event_logic['response_type'].append('json')
+                        msg['event_logic'] += "Incorrect unsubscribe logic response type. The response \
+                            type can`t be empty, json format will be used by default. If you want to \
+                            unsubscribe from logic updates - use 'logic:false'\n"
+
+            # by default logic response type is json
+            elif args['command'] == 'subscribe' and 'json' not in subscribes[index].event_logic['response_type']:
+                subscribes[index].event_logic['response_type'].append('json')
             if 'items' in args['event_logic']:
                 if isinstance(args['event_logic']['items'], str):
                     # if 'items' is 'all'
@@ -273,10 +294,14 @@ def listener():
                 pass
             if subscribes[index].event_logic['logic'] and logic.update_flag:
                 if logic.logic_update:
-                    msg = logic.get_dict()
-                    response = {'type': 'subscribe-event', 'event_type': "logic_json_update",
-                                'data': msg}
-                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response)))
+                    if 'json' in subscribes[index].event_logic['response_type']:
+                        msg = logic.get_dict()
+                        response = {'type': 'subscribe-event', 'event_type': "logic_json_update", 'data': msg}
+                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response,ensure_ascii=False)))
+                    if 'xml' in subscribes[index].event_logic['response_type']:
+                        msg = logic.get_xml().decode('utf-8')
+                        response = {'type': 'subscribe-event', 'event_type': "logic_xml_update", 'data': msg}
+                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response,ensure_ascii=False)))
             if subscribes[index].event_logic['items'] and logic.update_flag:
                 msg = dict()
                 items = logic.find_all_items()
@@ -290,7 +315,7 @@ def listener():
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "logic_item_update",
                                 'data': msg}
-                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response)))
+                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response,ensure_ascii=False)))
             if subscribes[index].event_items:
                 msg = dict()
                 for addr in subscribes[index].event_items:
@@ -303,7 +328,7 @@ def listener():
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "state_item",
                                 'data': msg}
-                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response)))
+                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response,ensure_ascii=False)))
             if subscribes[index].event_statistics:
                 pass
 
