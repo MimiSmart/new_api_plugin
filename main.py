@@ -74,18 +74,22 @@ threads[2].start()
 # проверяем раз в 5 сек живы ли потоки, если нет, то перезапускаем нужный
 while True:
     if not threads[0].is_alive():
-        shClient = SHClient("", "", config['key'], config['logic_path'])
-        shClient.readFromBlockedSocket = True
-        if shClient.run():
-            threads[0] = Thread(target=shClient.listener, args=[logic.state_items], name='shclient', daemon=True)
-            threads[0].start()
-        else:
+        try:
+            shClient = SHClient("", "", config['key'], config['logic_path'])
+            shClient.readFromBlockedSocket = True
+            if shClient.run():
+                threads[0] = Thread(target=shClient.listener, args=[logic.state_items], name='shclient', daemon=True)
+                print('Thread SHclient starting...')
+                threads[0].start()
+        except:
             print('Error start SHclient')
     if not threads[1].is_alive():
         threads[1] = Thread(target=server_run, args=[config['local_ip'], config['port']], name='server')
+        print('Thread server starting...')
         threads[1].start()
     if not threads[2].is_alive():
         threads[2] = Thread(target=ws.listener, name='ws subscribe events', daemon=True)
+        print('Thread ws subscribe events starting...')
         threads[2].start()
 
     # проверка обновилась ли логика
