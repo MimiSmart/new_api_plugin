@@ -24,7 +24,7 @@ class Logic:
 
     def __init__(self, path_logic):
         self.path_logic = path_logic
-        self.get_xml()
+        self.read_logic()
         self.crc16 = self.checksum()
         self.obj_logic = self.get_dict()
         items = self.find_all_items()
@@ -33,11 +33,14 @@ class Logic:
             self.item_crc[item['addr']] = self.checksum(json.dumps(item))
             self.item_update[item['addr']] = False
 
-    def get_xml(self):
+    def read_logic(self):
         with open(self.path_logic, 'rb') as f:
             self._header = f.readline()
             self.xml_logic = f.read()
-        return self._header + self.xml_logic
+            self.xml_logic = self.xml_logic.replace(b'&', b'#amp')
+
+    def get_xml(self):
+        return self.xml_logic.replace(b'#amp',b'&')
 
     def get_dict(self):
         e = ET.XML(self.xml_logic.decode())
@@ -139,11 +142,12 @@ class Logic:
 
     def write(self):
         with open(self.path_logic, 'wb') as f:
+            xml_logic = self._dict2xml(self.obj_logic).replace('#amp', '&')
             # костыль что бы вернуть <?xml version="1.0" encoding="UTF-8"?> в исходном виде
             # без него было бы
             # f.write(prettify(dict_to_etree(Dict)).encode('utf-8'))
             f.write(self._header)
-            for line in self._prettify(self._dict2xml(self.obj_logic)).split("\n")[1:]:
+            for line in self._prettify(xml_logic).split("\n")[1:]:
                 f.write((line + "\n").encode('utf-8'))
 
     # -----------------
@@ -288,9 +292,9 @@ class Logic:
         import subprocess
         crc = 0
         if data is None:
-            buffer = subprocess.run('./crc16/crc16 file '+self.path_logic, shell=True, capture_output=True)
+            buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 file '+self.path_logic, shell=True, capture_output=True)
         else:
-            buffer = subprocess.run('./crc16/crc16 string \'' + data + '\'', shell=True, capture_output=True)
+            buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 string \'' + data + '\'', shell=True, capture_output=True)
         crc = buffer.stdout.decode('utf-8')
         crc = int(crc, 16)
         # print(hex(crc))
@@ -300,7 +304,7 @@ class Logic:
     # Thread
     def update(self):
         if not self.update_flag:
-            self.get_xml()
+            self.read_logic()
 
             new_crc = self.checksum()
             if new_crc != self.crc16:
