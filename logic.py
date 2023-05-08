@@ -17,6 +17,11 @@ class Logic:
     item_crc = dict()
     item_update = dict()
 
+    # этот флаг нужен для безопасной работы с данными между потоками.
+    # если False, то работает функция logic.update
+    # eckb True, то функция logic.update не работает, работает рассылка подписки через ws
+    update_flag = False
+
     def __init__(self, path_logic):
         self.path_logic = path_logic
         self.get_xml()
@@ -47,9 +52,6 @@ class Logic:
             item = item[key]
         # return json.dumps(item, ensure_ascii=False)
         return item
-
-    def get_json(self):
-        return self.obj_logic
 
     def set_item(self, operation, tag, area_name, data):
         if operation == 'append':
@@ -297,22 +299,23 @@ class Logic:
 
     # Thread
     def update(self):
-        data = self.get_xml()
-        new_crc = self.checksum(data)
-        if new_crc != self.crc16:
+        if not self.update_flag:
+            self.get_xml()
 
-            # if True:
-            # тут будет триггериться ивент на обновление логики клиентам
-            # не забыть что и на отдельные итемы тоже обнову ннадо делать
-
-            # data = self.get_dict()
-            # data2 = self.find_all_items(data)
-            # crc_items = dict()
-            # for item in data2:
-            #     crc_items [item['@addr']] =
+            new_crc = self.checksum()
+            if new_crc != self.crc16:
+                self.logic_update = True
+                self.crc16 = new_crc
+                self.update_flag = True
 
             self.obj_logic = self.get_dict()
-            self.crc16 = new_crc
+            items = self.find_all_items()
+            for item in items:
+                item_crc = self.checksum(json.dumps(item))
+                if item['addr'] not in self.item_crc or item_crc != self.item_crc[item['addr']]:
+                    self.item_crc[item['addr']] = item_crc
+                    self.item_update[item['addr']] = True
+                    self.update_flag = True
 
     def find_all_items(self, data=None, tag='item'):
         if data is None:

@@ -41,7 +41,7 @@ with open(home_path + 'config') as f:
     config = json.load(f)
 
 # config['logic_path'] = 'logic.xml'  # DEBUG
-# config['local_ip'] = '192.168.1.105'  # DEBUG
+# config['local_ip'] = '192.168.1.106'  # DEBUG
 # ---------read logic--------------
 logic = Logic(config['logic_path'])
 rest.init_logic(logic)
@@ -87,12 +87,8 @@ while True:
     if not threads[2].is_alive():
         threads[2] = Thread(target=ws.listener, name='ws subscribe events', daemon=True)
         threads[2].start()
-    time.sleep(5)
 
-# BROKEN PIPE ERROR 32 IN SHCLIENT:
-# AF9FB3C0 2023/05/04  7:26:01.602                       SHS: [  !wrn]             shs 2031: Client with duplicated id 2031. Force closing old 'shs 2031'
-# AE1F83C0 2023/05/04  7:26:01.611           TCP client recv: [   msg]             shs 2031: Close connection. Recv zero.
-# AF9FB3C0 2023/05/04  7:26:01.619               client file: [   msg]             shs 2031: File 'shcxml' was sent (crc32: 0ABE71CD ->> 00000000) 15175.
-# AF9FB3C0 2023/05/04  7:26:01.625               TCP XML cmd: [   msg] [2031:  0] command (get-shc) completed successfully.
-# AF9FB3C0 2023/05/04  7:26:01.630                TCP client: [   msg]             shs 2031: deleted. Server 'SHS srv' client count: 1
-# AF9FB3C0 2023/05/04  7:26:01.817                TCP client: [   msg]             shs 2031: deleted. Server 'SHS srv' client count: 0
+    # проверка обновилась ли логика
+    logic.update()
+
+    time.sleep(5)
