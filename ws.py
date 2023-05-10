@@ -325,10 +325,10 @@ def listener():
                 msg = dict()
                 for addr in subscribes[index].event_items:
                     if addr in logic.state_items:
-                        new_state = logic.state_items[addr]['state']
+                        new_state = logic.state_items[addr]
                         # if new state not equal old state, then send event
                         if addr not in old_states or old_states[addr] != new_state:
-                            msg[addr] = new_state.encode('utf-8').hex(' ')
+                            msg[addr] = new_state.hex(' ')
                 # упаковываем все однотипные ивенты в 1 пакет
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "state_item",
@@ -341,7 +341,7 @@ def listener():
         tmp_state_items = logic.state_items.copy()
         # запоминаем все текущие стейты
         for key, value in tmp_state_items.items():
-            old_states[key] = value['state']
+            old_states[key] = value
 
         if logic.update_flag:
             # обнуляем флаги обновления логики

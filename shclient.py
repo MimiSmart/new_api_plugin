@@ -156,7 +156,6 @@ class SHClient:
             if not self.connectionResource.send(data):
                 print("error send")
 
-
     # PD=14 - REQUEST_ALL_DEVICES. if use with id module - this module returned first
     # PD=7 - set status
     # PD=1 - start packet
@@ -170,14 +169,14 @@ class SHClient:
         return s
 
     # get single device state
-    def listener(self, items, set_queue:list):
+    def listener(self, items, set_queue: list):
         print("Started listen packets")
         cntr = 0
         while True:
 
-            #тут освобождается очередь сетстатусов
+            # тут освобождается очередь сетстатусов
             while set_queue:
-                addr,state = set_queue[0]
+                addr, state = set_queue[0]
                 set_queue.pop(0)
                 self.setStatus(addr, state)
 
@@ -224,7 +223,7 @@ class SHClient:
                             dataLength -= length
 
                             # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
-                            items[addr] = {'state': data["data"]}
+                            items[addr] = data["data"]
 
                             # print("addr:%s\tstate:%s" % (addr, data["data"].hex(' ')))
                     elif PD == 7:
@@ -232,7 +231,7 @@ class SHClient:
                         # print("data:", data['data'].hex(' '))
                         addr = str(senderId) + ':' + str(senderSubId)
                         # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
-                        items[addr] = {'state': data["data"]}
+                        items[addr] = data["data"]
 
                         # print("addr:%s\tstate:%s"%(addr,data["data"].hex(' ')))
                     # skip other packets

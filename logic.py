@@ -370,8 +370,7 @@ class Logic:
         msg = list()
         for addr in data:
             try:
-                response[addr] = self.state_items[addr]
-                response[addr]['state'] = response[addr]['state'].hex(' ')
+                response[addr] = self.state_items[addr].hex(' ')
             except:
                 response[addr] = None
                 msg.append(addr)
@@ -381,7 +380,7 @@ class Logic:
             return {'type': 'response', 'data': response}
 
     def get_all_states(self):
-        copy = self.state_items.copy()
-        for item in copy.values():
-            item['state'] = item['state'].hex(' ')
+        copy = dict()
+        for key,value in self.state_items.items():
+            copy[key] = self.state_items[value].hex(' ')
         return {'type': 'response', 'data': copy}
