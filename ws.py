@@ -49,6 +49,11 @@ def get_all_states(logic: Logic, args):
     return logic.get_all_states()
 
 
+def set_state(logic: Logic, args):
+    args['state'] = [int(args['state'][i:i + 2]) for i in range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
+    logic.set_queue.append((args['addr'], args['state']))
+
+
 class SubscribeWebsocket:
     websocket: WebSocket
     event_logic: dict
@@ -297,11 +302,11 @@ def listener():
                     if 'json' in subscribes[index].event_logic['response_type']:
                         msg = logic.get_dict()
                         response = {'type': 'subscribe-event', 'event_type': "logic_json_update", 'data': msg}
-                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response,ensure_ascii=False)))
+                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
                     if 'xml' in subscribes[index].event_logic['response_type']:
                         msg = logic.get_xml().decode('utf-8')
                         response = {'type': 'subscribe-event', 'event_type': "logic_xml_update", 'data': msg}
-                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response,ensure_ascii=False)))
+                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_logic['items'] and logic.update_flag:
                 msg = dict()
                 items = logic.find_all_items()
@@ -315,7 +320,7 @@ def listener():
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "logic_item_update",
                                 'data': msg}
-                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response,ensure_ascii=False)))
+                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_items:
                 msg = dict()
                 for addr in subscribes[index].event_items:
@@ -323,12 +328,12 @@ def listener():
                         new_state = logic.state_items[addr]['state']
                         # if new state not equal old state, then send event
                         if addr not in old_states or old_states[addr] != new_state:
-                            msg[addr] = new_state.hex(' ')
+                            msg[addr] = new_state.encode('utf-8').hex(' ')
                 # упаковываем все однотипные ивенты в 1 пакет
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "state_item",
                                 'data': msg}
-                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response,ensure_ascii=False)))
+                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_statistics:
                 pass
 
@@ -356,6 +361,7 @@ commands = {
     "del_item": del_item,
     "get_state": get_state,
     "get_all_states": get_all_states,
+    "set_state": set_state,
     "subscribe": subscriber,
     "unsubscribe": subscriber
 }

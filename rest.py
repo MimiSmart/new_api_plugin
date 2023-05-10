@@ -61,3 +61,8 @@ def get_state(addr: str):
          summary="Get all current states of item")
 def get_all_states():
     return logic.get_all_states()
+
+@app.post("/item/set_state/", tags=['rest api'], summary="Set state on item")
+def set_state(item: SetState):
+    item.state = [int(item.state[i:i + 2]) for i in range(0, len(item.state), 2)] #разбиваем по байтам (2 символа)
+    logic.set_queue.append((item.addr, item.state))

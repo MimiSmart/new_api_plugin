@@ -146,6 +146,17 @@ class SHClient:
             if not self.connectionResource.send(data):
                 print("error send")
 
+    def setStatus(self, addr, state):
+        id, subid = addr.split(':')
+        # while len(state)<6:
+        #     state.append(0)
+        if self.runSuccess:
+            data = self.packData(int(id), int(subid), 5, len(state), state)
+            # print("Send data:", data.hex(' '))
+            if not self.connectionResource.send(data):
+                print("error send")
+
+
     # PD=14 - REQUEST_ALL_DEVICES. if use with id module - this module returned first
     # PD=7 - set status
     # PD=1 - start packet
@@ -159,10 +170,17 @@ class SHClient:
         return s
 
     # get single device state
-    def listener(self, items):
+    def listener(self, items, set_queue:list):
         print("Started listen packets")
         cntr = 0
         while True:
+
+            #тут освобождается очередь сетстатусов
+            while set_queue:
+                addr,state = set_queue[0]
+                set_queue.pop(0)
+                self.setStatus(addr, state)
+
             # ping server to avoid kick by timeout
             if cntr >= 60:
                 self.requestAllDevicesState()

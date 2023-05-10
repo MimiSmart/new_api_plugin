@@ -50,7 +50,7 @@ ws.init_logic(logic)
 shClient = SHClient("", "", config['key'], config['logic_path'])
 shClient.readFromBlockedSocket = True
 
-threads.append(Thread(target=shClient.listener, args=[logic.state_items], name='shclient', daemon=True))
+threads.append(Thread(target=shClient.listener, args=[logic.state_items, logic.set_queue], name='shclient', daemon=True))
 
 if shClient.run():
     print('Thread [1/3] starting...')
@@ -78,21 +78,29 @@ while True:
             shClient = SHClient("", "", config['key'], config['logic_path'])
             shClient.readFromBlockedSocket = True
             if shClient.run():
-                threads[0] = Thread(target=shClient.listener, args=[logic.state_items], name='shclient', daemon=True)
+                threads[0] = Thread(target=shClient.listener, args=[logic.state_items, logic.set_queue], name='shclient', daemon=True)
                 print('Thread SHclient starting...')
                 threads[0].start()
         except:
             print('Error start SHclient')
     if not threads[1].is_alive():
-        threads[1] = Thread(target=server_run, args=[config['local_ip'], config['port']], name='server')
-        print('Thread server starting...')
-        threads[1].start()
+        try:
+            threads[1] = Thread(target=server_run, args=[config['local_ip'], config['port']], name='server')
+            print('Thread server starting...')
+            threads[1].start()
+        except:
+            print('Error start WS&REST server')
     if not threads[2].is_alive():
-        threads[2] = Thread(target=ws.listener, name='ws subscribe events', daemon=True)
-        print('Thread ws subscribe events starting...')
-        threads[2].start()
-
+        try:
+            threads[2] = Thread(target=ws.listener, name='ws subscribe events', daemon=True)
+            print('Thread ws subscribe handler starting...')
+            threads[2].start()
+        except:
+            print('Error start ws subscribe handler')
     # проверка обновилась ли логика
-    logic.update()
+    try:
+        logic.update()
+    except:
+        print("Error logic update")
 
     time.sleep(5)
