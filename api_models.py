@@ -3,8 +3,17 @@ from typing import Union
 from pydantic import BaseModel, Field
 
 
+class SetState(BaseModel):
+    addr: str
+    state: str
+
+
 class DelItem(BaseModel):
     addr: str
+
+
+class SetLogic(BaseModel):
+    xml: str
 
 
 class GetState(BaseModel):

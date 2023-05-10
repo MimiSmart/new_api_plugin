@@ -16,7 +16,7 @@ class Logic:
     logic_update = False
     item_crc = dict()
     item_update = dict()
-
+    set_queue = list()
     # этот флаг нужен для безопасной работы с данными между потоками.
     # если False, то работает функция logic.update
     # eckb True, то функция logic.update не работает, работает рассылка подписки через ws
@@ -142,13 +142,23 @@ class Logic:
 
     def write(self):
         with open(self.path_logic, 'wb') as f:
-            xml_logic = self._dict2xml(self.obj_logic).replace('#amp', '&')
+            xml_logic = self._dict2xml(self.obj_logic)
             # костыль что бы вернуть <?xml version="1.0" encoding="UTF-8"?> в исходном виде
             # без него было бы
             # f.write(prettify(dict_to_etree(Dict)).encode('utf-8'))
+            xml_logic = self._prettify(xml_logic).replace('#amp', '&')
             f.write(self._header)
-            for line in self._prettify(xml_logic).split("\n")[1:]:
+            for line in xml_logic.split("\n")[1:]:
                 f.write((line + "\n").encode('utf-8'))
+
+    def set_xml(self,xml):
+        xml = xml.encode('utf-8')
+        with open(self.path_logic, 'wb') as f:
+            if f.write(xml) == len(xml):
+                return True
+            else:
+                return False
+
 
     # -----------------
     #   Function _xml2dict
@@ -361,6 +371,7 @@ class Logic:
         for addr in data:
             try:
                 response[addr] = self.state_items[addr]
+                response[addr]['state'] = response[addr]['state'].hex(' ')
             except:
                 response[addr] = None
                 msg.append(addr)
@@ -370,4 +381,7 @@ class Logic:
             return {'type': 'response', 'data': response}
 
     def get_all_states(self):
-        return {'type': 'response', 'data': self.state_items}
+        copy = self.state_items.copy()
+        for item in copy.values():
+            item['state'] = item['state'].hex(' ')
+        return {'type': 'response', 'data': copy}
