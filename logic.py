@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import subprocess
 from collections import defaultdict
 from xml.etree import cElementTree as ET
 
@@ -21,6 +22,7 @@ class Logic:
     # если False, то работает функция logic.update
     # eckb True, то функция logic.update не работает, работает рассылка подписки через ws
     update_flag = False
+    calculator = Calculator(Crc16.CCITT, optimized=True)
 
     def __init__(self, path_logic):
         self.path_logic = path_logic
@@ -40,7 +42,7 @@ class Logic:
             self.xml_logic = self.xml_logic.replace(b'&', b'#amp')
 
     def get_xml(self):
-        return self.xml_logic.replace(b'#amp',b'&')
+        return self.xml_logic.replace(b'#amp', b'&')
 
     def get_dict(self):
         e = ET.XML(self.xml_logic.decode())
@@ -151,14 +153,13 @@ class Logic:
             for line in xml_logic.split("\n")[1:]:
                 f.write((line + "\n").encode('utf-8'))
 
-    def set_xml(self,xml):
+    def set_xml(self, xml):
         xml = xml.encode('utf-8')
         with open(self.path_logic, 'wb') as f:
             if f.write(xml) == len(xml):
                 return True
             else:
                 return False
-
 
     # -----------------
     #   Function _xml2dict
@@ -299,12 +300,14 @@ class Logic:
 
     def checksum(self, data=None):
         # if data is None - calculate checksum for logic.xml file
-        import subprocess
         crc = 0
         if data is None:
-            buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 file '+self.path_logic, shell=True, capture_output=True)
+            buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 file ' + self.path_logic, shell=True,
+                                    capture_output=True)
         else:
-            buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 string \'' + data + '\'', shell=True, capture_output=True)
+            self.calculator.checksum(data.encode('utf-8'))
+            buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 string \'' + data + '\'', shell=True,
+                                    capture_output=True)
         crc = buffer.stdout.decode('utf-8')
         crc = int(crc, 16)
         # print(hex(crc))
@@ -322,14 +325,14 @@ class Logic:
                 self.crc16 = new_crc
                 self.update_flag = True
 
-            self.obj_logic = self.get_dict()
-            items = self.find_all_items()
-            for item in items:
-                item_crc = self.checksum(json.dumps(item))
-                if item['addr'] not in self.item_crc or item_crc != self.item_crc[item['addr']]:
-                    self.item_crc[item['addr']] = item_crc
-                    self.item_update[item['addr']] = True
-                    self.update_flag = True
+                self.obj_logic = self.get_dict()
+                items = self.find_all_items()
+                for item in items:
+                    item_crc = self.checksum(json.dumps(item))
+                    if item['addr'] not in self.item_crc or item_crc != self.item_crc[item['addr']]:
+                        self.item_crc[item['addr']] = item_crc
+                        self.item_update[item['addr']] = True
+                        self.update_flag = True
 
     def find_all_items(self, data=None, tag='item'):
         if data is None:
@@ -381,6 +384,6 @@ class Logic:
 
     def get_all_states(self):
         copy = dict()
-        for key,value in self.state_items.items():
+        for key, value in self.state_items.items():
             copy[key] = self.state_items[value].hex(' ')
         return {'type': 'response', 'data': copy}
