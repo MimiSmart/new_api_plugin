@@ -121,6 +121,7 @@ class SHClient:
         if self.readFromBlockedSocket:
             while (size - len(res)) > 0:
                 response = self.connectionResource.recvfrom(size - len(res))[0]
+                # print(response.hex(' '))
                 # len data equal 0 if server disconnect
                 if not len(response):
                     print('SHclient disconnected')
@@ -195,21 +196,14 @@ class SHClient:
                 if shHead != "" and unpackData[0] == 6:
                     continue
                 if shHead == "shcxml":
-                    line = self.fread(unpackData[0])
+                    line = self.fread(unpackData[0] - 6)
                     continue
                 elif shHead == "messag":
                     message = self.fread(unpackData[0] - 6)
                     continue
                 else:
-                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
-                                                                                                      data["data"])
-                    # print("senderId: ", senderId)
-                    # print("destId: ", destId)
-                    # print("PD:", PD)
-                    # print("transid:", transid)
-                    # print("senderSubId:", senderSubId)
-                    # print("destSubId:", destSubId)
-                    # print("dataLength:", dataLength)
+                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",data["data"])
+                    # print("senderId: %d, destId: %d, PD: %d, transid: %d, senderSubId: %d, destSubId: %d, dataLength:%d"%struct.unpack("2H4BH",data["data"]))
 
                     if PD == 15:
                         while dataLength > 0:
