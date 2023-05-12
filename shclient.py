@@ -1,3 +1,4 @@
+import datetime
 import os
 import socket
 import struct
@@ -38,8 +39,6 @@ class SHClient:
     devicesQuery = ""
     stopListenEventsOnMsg = False
     readFromBlockedSocket = False
-
-    listenEventsDelay = 70000
 
     bcmathExist = False
     xmlDoc = None
@@ -85,11 +84,12 @@ class SHClient:
                     return False
             elif self.xmlFile != "" and os.path.exists(self.xmlFile):
                 self.readXmlLogic()
-                with open(self.xmlFile) as f:
-                    self.logicXml = f.read()
+                # with open(self.xmlFile) as f:
+                #     self.logicXml = f.read()
         if self.logicXml == "":
             self.logicXml = "<?xml version='1+0' encoding='UTF-8'?><smart-house name=\"Умный дом\"></smart-house>"
 
+        self.connectionResource.setblocking(True)
         self.runSuccess = True
         return True
 
@@ -170,10 +170,17 @@ class SHClient:
         return s
 
     # get single device state
-    def listener(self, items, set_queue: list):
+    def listener(self, items, history, set_queue: list):
         print("Started listen packets")
         cntr = 0
         while True:
+            # тут проверяются запросы на историю итемов
+            if history:
+                for key in history.keys():
+                    if not history[key]['value'] and not history[key]['requested']:
+                        history[key]['requested'] = True
+                        # "temperature-sensor"
+                        self.getDeviceHistory(key, history[key]['range_time'], history[key]['scale'])
 
             # тут освобождается очередь сетстатусов
             while set_queue:
@@ -201,8 +208,18 @@ class SHClient:
                 elif shHead == "messag":
                     message = self.fread(unpackData[0] - 6)
                     continue
+                elif shHead == "hismin":
+                    line = self.fread(unpackData[0] - 6)
+                    id, subid, data = struct.unpack("HB%ds" % (len(line['data']) - 3), line['data'])
+                    addr = str(id) + ':' + str(subid)
+                    if not addr in history:
+                        history[addr] = dict()
+                    history[addr]['value'] = struct.unpack("%dB" % (len(data)), data)
+                    # history[addr]['value'] = struct.unpack("%dH" % (len(data) / 2), data)
+                    history[addr]['responsed'] = True
                 else:
-                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",data["data"])
+                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
+                                                                                                      data["data"])
                     # print("senderId: %d, destId: %d, PD: %d, transid: %d, senderSubId: %d, destSubId: %d, dataLength:%d"%struct.unpack("2H4BH",data["data"]))
 
                     if PD == 15:
@@ -299,6 +316,31 @@ class SHClient:
                     if not tmpdata["success"]:
                         return
                 time.sleep(0.1)
+
+    # addr - str "id:subid". ex.: "999:99"
+    # range_date - list of 2 timestamps, ex.: [1683800000,1683800001]
+    def getDeviceHistory(self, addr, range_time, scale):
+        id, subid = addr.split(':')
+        history = list()
+
+        local_now = datetime.datetime.now().astimezone()
+        gmtdiff = local_now.tzinfo.utcoffset(local_now).seconds * -1
+
+        xml = ""
+        xml += '<?xml version="1.0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
+        xml += '<get-history-minutely id="' + id + '" sub-id="' + subid + '"'
+        if scale is not None and scale > 1:
+            xml += ' scale="' + str(scale) + '"'
+        xml += ' start-timet="' + str(range_time[0]) + '"'
+        xml += ' end-timet="' + str(range_time[1]) + '"'
+        xml += "/>\n"
+        xml += "</smart-house-commands>\n"
+
+        xmlsize = len(xml)
+        data = struct.pack("L", xmlsize) + xml.encode('utf-8')
+        if not self.connectionResource.send(data):
+            print("Exception appeared. Couldn't write to socket next data: ", str(data))
+        print("history request send")
 
     # def getDisplayedDevices(self):
     #         query = '#area[not(@permissions)]/item[@type!="rtsp" and @type!="remote-control" and @type!="multi-room" and @type!="virtual"]'

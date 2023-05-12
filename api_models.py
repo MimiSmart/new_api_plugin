@@ -25,3 +25,9 @@ class SetItem(BaseModel):
     tag: str = Field(title="Tag of item ('item', 'area', etc.)")
     area: str = Field(title="Name of area. if set item in root - set 'smart-house'")
     data: dict = Field(title="Attributes and childs of added item in format key:value")
+
+
+class GetHistory(BaseModel):
+    addr: str
+    range_time: list
+    scale: int

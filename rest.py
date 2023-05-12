@@ -1,4 +1,5 @@
 # app.py
+import time
 from typing import Annotated
 
 from fastapi import FastAPI, Body
@@ -77,3 +78,20 @@ def get_all_states():
 def set_state(item: SetState):
     item.state = [int(item.state[i:i + 2]) for i in range(0, len(item.state), 2)]  # разбиваем по байтам (2 символа)
     logic.set_queue.append((item.addr, item.state))
+
+
+@app.post("/item/get_history/", tags=['rest api'], summary="Set state on item")
+def get_history(args: GetHistory):
+    # добавить обработку, если уже есть такой запрос но от другого клиента
+    logic.history[args.addr] = {
+        'value': list(),
+        'client': 'rest',
+        'requested': False,
+        'range_time': args.range_time,
+        'scale': args.scale
+    }
+    for i in range(2):
+        time.sleep(0.5)
+        if logic.history[args.addr]['value']:
+            return {"type":"response","addr":args.addr,"history":logic.history[args.addr]['value']}
+    return {"type":"error","message":"No history, return by timeout"}

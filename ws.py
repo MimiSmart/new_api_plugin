@@ -50,8 +50,20 @@ def get_all_states(logic: Logic, args):
 
 
 def set_state(logic: Logic, args):
-    args['state'] = [int(args['state'][i:i + 2]) for i in range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
+    args['state'] = [int(args['state'][i:i + 2]) for i in
+                     range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
     logic.set_queue.append((args['addr'], args['state']))
+
+
+# пока делаю на 1 коннект, допилить по много
+def get_history(logic: Logic, args):
+    logic.history[args['addr']] = {
+        'value': list(),
+        'client': args['client'],
+        'requested': False,
+        'range_time': args['range_time'],
+        'scale': args['scale']
+    }
 
 
 class SubscribeWebsocket:
@@ -265,24 +277,32 @@ async def endpoint(websocket: WebSocket):
     try:
         # обработка сообщений от клиента
         while True:
+            reply = None
             data = await websocket.receive_text()
             try:
                 data = json.loads(data)
+            except:
+                reply = {'type': 'error', 'message': 'Invalid json!'}
+            if not reply:
                 # check if exists command
                 if data['command'] in commands:
 
                     if data['command'] == 'subscribe' or data['command'] == 'unsubscribe':
                         reply = subscriber(find_index(websocket), data)
                     else:
+                        if data['command'] == 'get_history':
+                            data['client'] = websocket
                         cmd = data['command']
                         data.pop('command')
                         reply = commands[cmd](logic, data)
                 else:
                     reply = {'type': 'error', 'message': 'Command not found!'}
+
+            try:
+                if reply:
+                    await websocket.send_text(json.dumps(reply, ensure_ascii=False))
             except:
-                reply = {'type': 'error', 'message': 'Invalid json!'}
-            reply = json.dumps(reply, ensure_ascii=False)
-            await websocket.send_text(reply)
+                print("Error send data to websocket")
     # disconnect client
     except WebSocketDisconnect:
         subscribes.pop(find_index(websocket))
@@ -295,6 +315,16 @@ def listener():
     while True:
         length = len(subscribes)
         for index in range(length):
+            if logic.history:
+                copy = logic.history.copy()
+                for key, item in copy.items():
+                    if 'responsed' in item:
+                        values = item['value']
+                        # values = [round((item >> 8) + ((item & 0xFF) / 255.0), 2) for item in values]  # for temp sensor
+                        response = {'type': 'response', 'history': values, 'addr': key}
+                        asyncio.run(send_message(item['client'],
+                                                 json.dumps(response, ensure_ascii=False)))  # if client connected
+                        logic.history.pop(key)
             if subscribes[index].event_msg:
                 pass
             if subscribes[index].event_logic['logic'] and logic.update_flag:
@@ -362,6 +392,7 @@ commands = {
     "get_state": get_state,
     "get_all_states": get_all_states,
     "set_state": set_state,
+    "get_history": get_history,
     "subscribe": subscriber,
     "unsubscribe": subscriber
 }

@@ -18,6 +18,8 @@ class Logic:
     item_crc = dict()
     item_update = dict()
     set_queue = list()
+    # в history по запросу будет загружаться история элемента, при ответе на запрос очищаться
+    history = dict()
     # этот флаг нужен для безопасной работы с данными между потоками.
     # если False, то работает функция logic.update
     # eckb True, то функция logic.update не работает, работает рассылка подписки через ws
@@ -314,7 +316,6 @@ class Logic:
 
         return crc
 
-    # Thread
     def update(self):
         if not self.update_flag:
             self.read_logic()

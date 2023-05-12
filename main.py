@@ -50,7 +50,8 @@ ws.init_logic(logic)
 shClient = SHClient("", "", config['key'], config['logic_path'])
 shClient.readFromBlockedSocket = True
 
-threads.append(Thread(target=shClient.listener, args=[logic.state_items, logic.set_queue], name='shclient', daemon=True))
+threads.append(Thread(target=shClient.listener, args=[logic.state_items, logic.history, logic.set_queue],
+                      name='shclient', daemon=True))
 
 if shClient.run():
     print('Thread [1/3] starting...')
@@ -78,7 +79,8 @@ while True:
             shClient = SHClient("", "", config['key'], config['logic_path'])
             shClient.readFromBlockedSocket = True
             if shClient.run():
-                threads[0] = Thread(target=shClient.listener, args=[logic.state_items, logic.set_queue], name='shclient', daemon=True)
+                threads[0] = Thread(target=shClient.listener, args=[logic.state_items, logic.history, logic.set_queue],
+                                    name='shclient', daemon=True)
                 print('Thread SHclient starting...')
                 threads[0].start()
         except:
@@ -97,10 +99,11 @@ while True:
             threads[2].start()
         except:
             print('Error start ws subscribe handler')
+
     # проверка обновилась ли логика
     try:
         logic.update()
     except:
         print("Error logic update")
 
-    time.sleep(5)
+    time.sleep(1)
