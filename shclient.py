@@ -79,13 +79,11 @@ class SHClient:
             self.connectionResource.settimeout(self.connectionTimeOut)
         except:
             print('No connection to shs server')
-        self.retranslateUdpSent = False
 
     def authorization(self):
         if self.connectionResource:
             data = self.fread(16)
             if data["success"]:
-                from Crypto.Cipher import AES
                 cipher = AES.new(self.aeskey.encode('utf-8'), AES.MODE_ECB)
                 encrypted = cipher.encrypt(data['data'])
                 self.connectionResource.send(encrypted)
@@ -209,18 +207,13 @@ class SHClient:
                             data = self.fread(length)
                             dataLength -= length
 
-                            # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
-                            items[addr] = data["data"]
-
-                            # print("addr:%s\tstate:%s" % (addr, data["data"].hex(' ')))
+                            self.logic.items[addr].state = data['data']
+                            self.logic.items[addr].state_timestamp = round(time.time())
                     elif PD == 7:
                         data = self.fread(dataLength)
-                        # print("data:", data['data'].hex(' '))
                         addr = str(senderId) + ':' + str(senderSubId)
-                        # items[addr] = {'state': data["data"].hex(' '), 'timestamp': int(time.time())}
-                        items[addr] = data["data"]
-
-                        # print("addr:%s\tstate:%s"%(addr,data["data"].hex(' ')))
+                        self.logic.items[addr].state = data['data']
+                        self.logic.items[addr].state_timestamp = round(time.time())
                     # skip other packets
                     else:
                         self.fread(dataLength)

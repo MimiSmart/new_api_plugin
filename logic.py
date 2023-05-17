@@ -2,27 +2,32 @@
 import json
 import subprocess
 from collections import defaultdict
+from typing import Dict
 from xml.etree import cElementTree as ET
 
 from crc import Calculator, Crc16
 
+from item import Item
+
 
 class Logic:
-    _header = ""
-    path_logic = ""
-    xml_logic = ""
+    path_logic: str = ""
+
+    _header: bytes = b""
+    xml_logic: bytes = b""
     obj_logic = None
-    crc16 = 0
-    state_items = dict()
-    logic_update = False
-    item_crc = dict()
-    item_update = dict()
+
+    crc16: int = 0
+    logic_update: bool = False
+
+    items: Dict[str, Item] = dict()
+
     set_queue = list()
     # в history по запросу будет загружаться история элемента, при ответе на запрос очищаться
     history = dict()
     # этот флаг нужен для безопасной работы с данными между потоками.
     # если False, то работает функция logic.update
-    # eckb True, то функция logic.update не работает, работает рассылка подписки через ws
+    # если True, то функция logic.update не работает, работает рассылка подписки через ws
     update_flag = False
     calculator = Calculator(Crc16.CCITT, optimized=True)
 
@@ -31,11 +36,9 @@ class Logic:
         self.read_logic()
         self.crc16 = self.checksum()
         self.obj_logic = self.get_dict()
-        items = self.find_all_items()
-        # items = [item['addr'] for item in items] # get list addr of items
-        for item in items:
-            self.item_crc[item['addr']] = self.checksum(json.dumps(item))
-            self.item_update[item['addr']] = False
+        for item in self.find_all_items():
+            crc = self.checksum(json.dumps(item))
+            self.items[item['addr']] = Item(addr=item['addr'], crc=crc, update=False, json_obj=item)
 
     def read_logic(self):
         with open(self.path_logic, 'rb') as f:
@@ -151,6 +154,7 @@ class Logic:
             # без него было бы
             # f.write(prettify(dict_to_etree(Dict)).encode('utf-8'))
             xml_logic = self._prettify(xml_logic).replace('#amp', '&')
+            xml_logic = xml_logic.replace('&quot;','"')
             f.write(self._header)
             for line in xml_logic.split("\n")[1:]:
                 f.write((line + "\n").encode('utf-8'))
@@ -330,10 +334,13 @@ class Logic:
                 items = self.find_all_items()
                 for item in items:
                     item_crc = self.checksum(json.dumps(item))
-                    if item['addr'] not in self.item_crc or item_crc != self.item_crc[item['addr']]:
-                        self.item_crc[item['addr']] = item_crc
-                        self.item_update[item['addr']] = True
-                        self.update_flag = True
+                    addr: str = item['addr']
+                    if addr not in self.items:
+                        self.items[addr] = Item(addr=addr, crc=item_crc, update=True, json_obj=item)
+                    elif self.items[addr].crc != item_crc:
+                        self.items[addr].crc = item_crc
+                        self.items[addr].update = True
+                        self.items[addr].json_obj = item
 
     def find_all_items(self, data=None, tag='item'):
         if data is None:
@@ -374,7 +381,7 @@ class Logic:
         msg = list()
         for addr in data:
             try:
-                response[addr] = self.state_items[addr].hex(' ')
+                response[addr] = self.items[addr].state.hex(' ')
             except:
                 response[addr] = None
                 msg.append(addr)
@@ -385,6 +392,9 @@ class Logic:
 
     def get_all_states(self):
         copy = dict()
-        for key, value in self.state_items.items():
-            copy[key] = self.state_items[value].hex(' ')
+        for addr, item in self.items.items():
+            try:
+                copy[addr] = item.state.hex(' ')
+            except:
+                copy[addr] = None
         return {'type': 'response', 'data': copy}

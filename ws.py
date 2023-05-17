@@ -139,9 +139,8 @@ def subscriber(index, args):
                     if args['event_logic']['items'] == 'all':
                         if args['command'] == 'subscribe':
                             # append all existed items to subscribe
-                            for item in logic.find_all_items():
-                                if 'addr' in item:
-                                    subscribes[index].event_logic['items'].append(item['addr'])
+                            for item in logic.items:
+                                subscribes[index].event_logic['items'].append(item.addr)
                             # remove duplicates
                             subscribes[index].event_logic['items'] = \
                                 list(set(subscribes[index].event_logic['items']))
@@ -157,8 +156,7 @@ def subscriber(index, args):
                 # list of items
                 if isinstance(args['event_logic']['items'], list):
                     if args['command'] == 'subscribe':
-                        items = logic.find_all_items()
-                        items = [item['addr'] for item in items]
+                        items = [item.addr for item in logic.items.values()]
                         flag = False
                         # search for subscribed items in existed items
                         for item in args['event_logic']['items']:
@@ -201,8 +199,7 @@ def subscriber(index, args):
         if isinstance(args['event_items'], list):
             if args['command'] == 'subscribe':
                 # search all existed items in logic
-                items = logic.find_all_items()
-                items = [item['addr'] for item in items]
+                items = [item.addr for item in logic.items.values()]
                 # search for subscribed items in existed items
                 for item in args['event_items']:
                     if item in items:
@@ -232,9 +229,8 @@ def subscriber(index, args):
             if args['event_items'] == 'all':
                 if args['command'] == 'subscribe':
                     # append all existed items to subscribe
-                    for item in logic.find_all_items():
-                        if 'addr' in item:
-                            subscribes[index].event_items.append(item['addr'])
+                    for item in logic.items.values():
+                        subscribes[index].event_items.append(item.addr)
                     # remove duplicates
                     subscribes[index].event_items = \
                         list(set(subscribes[index].event_items))
@@ -339,13 +335,9 @@ def listener():
                         asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_logic['items'] and logic.update_flag:
                 msg = dict()
-                items = logic.find_all_items()
                 for addr in subscribes[index].event_logic['items']:
-                    if addr in logic.item_update and logic.item_update[addr]:
-                        for item in items:
-                            if item['addr'] == addr:
-                                msg[addr] = item
-                                break
+                    if addr in logic.items.keys() and logic.items[addr].update:
+                        msg[addr] = logic.items[addr].json_obj
                 # упаковываем все однотипные ивенты в 1 пакет
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "logic_item_update",
@@ -354,8 +346,8 @@ def listener():
             if subscribes[index].event_items:
                 msg = dict()
                 for addr in subscribes[index].event_items:
-                    if addr in logic.state_items:
-                        new_state = logic.state_items[addr]
+                    if addr in logic.items.keys() and logic.items[addr].state is not None:
+                        new_state = logic.items[addr].state
                         # if new state not equal old state, then send event
                         if addr not in old_states or old_states[addr] != new_state:
                             msg[addr] = new_state.hex(' ')
@@ -368,17 +360,17 @@ def listener():
                 pass
 
         # avoid exception: 'dictionary changed size during iteration'
-        tmp_state_items = logic.state_items.copy()
+        tmp_items = logic.items.copy()
         # запоминаем все текущие стейты
-        for key, value in tmp_state_items.items():
-            old_states[key] = value
+        for addr, item in tmp_items.items():
+            old_states[addr] = item.state
 
         if logic.update_flag:
             # обнуляем флаги обновления логики
             if logic.logic_update:
                 logic.logic_update = False
-            for key in logic.item_update.keys():
-                logic.item_update[key] = False
+            for addr, item in logic.items.items():
+                item.update = False
             logic.update_flag = False
 
         time.sleep(0.3)
