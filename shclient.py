@@ -4,6 +4,10 @@ import socket
 import struct
 import time
 
+from Crypto.Cipher import AES
+
+from logic import Logic
+
 # from time import time
 
 LogPath = '/home/sh2/logs/log.txt'
@@ -15,7 +19,6 @@ class SHClient:
     # host='89.17.55.74' # DEBUG
     port = "55555"  # RELEASE
     # port = "57778" # DEBUG
-    aes = None
     aeskey = ""
     initClientDefValue = 0x7ef
     initClientID = 0
@@ -23,40 +26,18 @@ class SHClient:
     xmlFile = ""
     allowReadXmlLogic = True
     allowRetraslateUDP = True
-    serverWithMessages = False
-    saveXmlLogic = True
     keysFile = "/home/sh2/keys.txt"
-    debug = False
 
     connectionTimeOut = 5  # seconds
     connectionResource = None
-    errors = list()
 
-    devicesStatesStore = dict()
-
-    displayedDevices = dict()
-
-    devicesQuery = ""
-    stopListenEventsOnMsg = False
     readFromBlockedSocket = False
-
-    bcmathExist = False
-    xmlDoc = None
-    xpath = None
-
     runSuccess = False
-    readSocketTimeout = 3  # seconds
 
-    serverAnswer = ""
-    shCommandsList = ["update-cans",
-                      "update-can-log",
-                      "cmd-pn",
-                      "cmd-co",
-                      "cmd-ti",
-                      "cmd-qu"
-                      ]
-    retranslateUdpSent = False
-    devHistory = []
+    logic: Logic
+
+    def init_logic(self, _logic):
+        self.logic = _logic
 
     def __init__(self, host="", port="", aeskey="", xmlfile=""):
         if host != "": self.host = host
@@ -65,9 +46,6 @@ class SHClient:
         self.xmlFile = xmlfile
 
     def run(self):
-        if len(self.errors) > 0:
-            return False
-
         self.connectToServer()
         if not self.connectionResource:
             return False
@@ -170,22 +148,22 @@ class SHClient:
         return s
 
     # get single device state
-    def listener(self, items, history, set_queue: list):
+    def listener(self):
         print("Started listen packets")
         cntr = 0
         while True:
             # тут проверяются запросы на историю итемов
-            if history:
-                for key in history.keys():
-                    if not history[key]['value'] and not history[key]['requested']:
-                        history[key]['requested'] = True
-                        # "temperature-sensor"
-                        self.getDeviceHistory(key, history[key]['range_time'], history[key]['scale'])
+            if self.logic.history:
+                for addr in self.logic.history.keys():
+                    if not self.logic.history[addr]['value'] and not self.logic.history[addr]['requested']:
+                        self.logic.history[addr]['requested'] = True
+                        self.getDeviceHistory(addr, self.logic.history[addr]['range_time'],
+                                              self.logic.history[addr]['scale'])
 
             # тут освобождается очередь сетстатусов
-            while set_queue:
-                addr, state = set_queue[0]
-                set_queue.pop(0)
+            while self.logic.set_queue:
+                addr, state = self.logic.set_queue[0]
+                self.logic.set_queue.pop(0)
                 self.setStatus(addr, state)
 
             # ping server to avoid kick by timeout
@@ -212,11 +190,11 @@ class SHClient:
                     line = self.fread(unpackData[0] - 6)
                     id, subid, data = struct.unpack("HB%ds" % (len(line['data']) - 3), line['data'])
                     addr = str(id) + ':' + str(subid)
-                    if not addr in history:
-                        history[addr] = dict()
-                    history[addr]['value'] = struct.unpack("%dB" % (len(data)), data)
+                    if not addr in self.logic.history:
+                        self.logic.history[addr] = dict()
+                    self.logic.history[addr]['value'] = struct.unpack("%dB" % (len(data)), data)
                     # history[addr]['value'] = struct.unpack("%dH" % (len(data) / 2), data)
-                    history[addr]['responsed'] = True
+                    self.logic.history[addr]['responsed'] = True
                 else:
                     senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
                                                                                                       data["data"])
@@ -226,10 +204,8 @@ class SHClient:
                         while dataLength > 0:
                             line = self.fread(2)
                             dataLength -= 2
-
                             subid, length = struct.unpack("2B", line["data"])
                             addr = str(senderId) + ':' + str(subid)
-
                             data = self.fread(length)
                             dataLength -= length
 
@@ -247,7 +223,7 @@ class SHClient:
                         # print("addr:%s\tstate:%s"%(addr,data["data"].hex(' ')))
                     # skip other packets
                     else:
-                        ad = self.fread(dataLength)
+                        self.fread(dataLength)
 
     def readXmlLogic(self):
         xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"

@@ -48,10 +48,10 @@ rest.init_logic(logic)
 ws.init_logic(logic)
 # --------run listener states------
 shClient = SHClient("", "", config['key'], config['logic_path'])
+shClient.init_logic(logic)
 shClient.readFromBlockedSocket = True
 
-threads.append(Thread(target=shClient.listener, args=[logic.state_items, logic.history, logic.set_queue],
-                      name='shclient', daemon=True))
+threads.append(Thread(target=shClient.listener, name='shclient', daemon=True))
 
 if shClient.run():
     print('Thread [1/3] starting...')
@@ -64,7 +64,6 @@ else:
 threads.append(Thread(target=server_run, args=[config['local_ip'], config['port']], name='server'))
 print('Thread [2/3] starting...')
 threads[1].start()
-# rest.run(config['local_ip'], config['port'], logic)
 
 time.sleep(1)
 
