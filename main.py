@@ -17,10 +17,6 @@ threads = list()
 
 home_path = '/home/sh2/exe/new_api_plugin/'  # RELEASE
 
-
-# home_path = './'  # DEBUG
-
-
 def server_run(host, port):
     rest.app.add_api_websocket_route('/', ws.endpoint)
 
@@ -40,8 +36,6 @@ def server_run(host, port):
 with open(home_path + 'config') as f:
     config = json.load(f)
 
-# config['logic_path'] = 'logic.xml'  # DEBUG
-# config['local_ip'] = '192.168.1.106'  # DEBUG
 # ---------read logic--------------
 logic = Logic(config['logic_path'])
 rest.init_logic(logic)
@@ -77,9 +71,9 @@ while True:
         try:
             shClient = SHClient("", "", config['key'], config['logic_path'])
             shClient.readFromBlockedSocket = True
+            shClient.init_logic(logic)
             if shClient.run():
-                threads[0] = Thread(target=shClient.listener, args=[logic.state_items, logic.history, logic.set_queue],
-                                    name='shclient', daemon=True)
+                threads[0] = Thread(target=shClient.listener, name='shclient', daemon=True)
                 print('Thread SHclient starting...')
                 threads[0].start()
         except:

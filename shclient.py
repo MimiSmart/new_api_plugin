@@ -153,7 +153,7 @@ class SHClient:
             # тут проверяются запросы на историю итемов
             if self.logic.history:
                 for addr in self.logic.history.keys():
-                    if not self.logic.history[addr]['value'] and not self.logic.history[addr]['requested']:
+                    if not self.logic.items[addr].history and not self.logic.history[addr]['requested']:
                         self.logic.history[addr]['requested'] = True
                         self.getDeviceHistory(addr, self.logic.history[addr]['range_time'],
                                               self.logic.history[addr]['scale'])
@@ -188,11 +188,9 @@ class SHClient:
                     line = self.fread(unpackData[0] - 6)
                     id, subid, data = struct.unpack("HB%ds" % (len(line['data']) - 3), line['data'])
                     addr = str(id) + ':' + str(subid)
-                    if not addr in self.logic.history:
-                        self.logic.history[addr] = dict()
-                    self.logic.history[addr]['value'] = struct.unpack("%dB" % (len(data)), data)
-                    # history[addr]['value'] = struct.unpack("%dH" % (len(data) / 2), data)
-                    self.logic.history[addr]['responsed'] = True
+                    self.logic.items[addr].history = list(struct.unpack("%dB" % (len(data)), data))
+                    if addr in self.logic.history:
+                        self.logic.history[addr]['responsed'] = True
                 else:
                     senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
                                                                                                       data["data"])
@@ -206,14 +204,15 @@ class SHClient:
                             addr = str(senderId) + ':' + str(subid)
                             data = self.fread(length)
                             dataLength -= length
-
-                            self.logic.items[addr].state = data['data']
-                            self.logic.items[addr].state_timestamp = round(time.time())
+                            if addr in self.logic.items:
+                                self.logic.items[addr].state = data['data']
+                                self.logic.items[addr].state_timestamp = round(time.time())
                     elif PD == 7:
                         data = self.fread(dataLength)
                         addr = str(senderId) + ':' + str(senderSubId)
-                        self.logic.items[addr].state = data['data']
-                        self.logic.items[addr].state_timestamp = round(time.time())
+                        if addr in self.logic.items:
+                            self.logic.items[addr].state = data['data']
+                            self.logic.items[addr].state_timestamp = round(time.time())
                     # skip other packets
                     else:
                         self.fread(dataLength)
