@@ -17,6 +17,7 @@ threads = list()
 
 home_path = '/home/sh2/exe/new_api_plugin/'  # RELEASE
 
+
 def server_run(host, port):
     rest.app.add_api_websocket_route('/', ws.endpoint)
 
@@ -48,7 +49,7 @@ shClient.readFromBlockedSocket = True
 threads.append(Thread(target=shClient.listener, name='shclient', daemon=True))
 
 if shClient.run():
-    print('Thread [1/3] starting...')
+    print('Thread [1/4] starting...')
     threads[0].start()
     # shClient.requestAllDevicesState()
     time.sleep(0.1)
@@ -56,14 +57,31 @@ else:
     print('Error start SHclient')
 # -------run rest & ws-------------
 threads.append(Thread(target=server_run, args=[config['local_ip'], config['port']], name='server'))
-print('Thread [2/3] starting...')
+print('Thread [2/4] starting...')
 threads[1].start()
 
 time.sleep(1)
 
 threads.append(Thread(target=ws.listener, name='ws subscribe events', daemon=True))
-print('Thread [3/3] starting...')
+print('Thread [3/4] starting...')
 threads[2].start()
+
+
+def history_writer(state=None):
+    # костыль для свитча. состояние свитча записывается при изменении
+    if state:
+        pass
+    else:
+        while True:
+            time.sleep(60)
+            for item in logic.items.values():
+                if item.type != 'switch' and item.state:
+                    item.write_history()
+
+
+threads.append(Thread(target=history_writer, name='history writer', daemon=True))
+print('Thread [4/4] starting...')
+threads[3].start()
 
 # проверяем раз в 5 сек живы ли потоки, если нет, то перезапускаем нужный
 while True:
@@ -92,7 +110,13 @@ while True:
             threads[2].start()
         except:
             print('Error start ws subscribe handler')
-
+    if not threads[3].is_alive():
+        try:
+            threads[3] = Thread(target=history_writer, name='history writer', daemon=True)
+            print('Thread history writer starting...')
+            threads[3].start()
+        except:
+            print('Error start history writer')
     # проверка обновилась ли логика
     try:
         logic.update()

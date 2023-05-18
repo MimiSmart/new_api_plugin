@@ -32,7 +32,7 @@ class Item:
     history: list = None
     json_obj: dict = None
     update: bool = None
-    state_timestamp: int = None
+    # state_timestamp: int = None
     type: str = None
     hst_supported: bool = False
 
@@ -50,13 +50,9 @@ class Item:
         else:
             return None
 
-    # переделать структуру hst. 0xFF присутствует как статус у некоторых элементов (valve-heating)
-    # поэтому сделать 0xFFFE timestamp 0xFEFF. а undefined можно обозначить как 0xFF одним байтом
-
     # .hst structure:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
-    # not tested
     def write_history(self):
         if self.type in hst_supported_types.keys():
             id, subid = self.addr.split(':')
@@ -66,24 +62,26 @@ class Item:
                 hst = self.read_history()
                 if hst is None:
                     return False
-                key = list(hst.keys()).sort()[-1]
+                key = list(hst.keys())
+                key.sort()
+                key = key[-1]
                 with open('/home/sh2/exe/new_api_plugin/history/' + filename, 'ab') as f:
                     # if item wasn`t undefined and cur state is not undefined
                     if hst[key] is not None and self.state[0] != 0xFF:
                         f.write(self.state)
                     else:
-                        f.write(0xFF.to_bytes(1, 'big'))
-                        f.write(round(time.time()).to_bytes(4, 'big', signed=False))
-                        f.write(0xFF.to_bytes(1, 'big'))
+                        f.write(0xFF.to_bytes(1, 'little'))
+                        f.write(round(time.time()).to_bytes(4, 'little', signed=False))
+                        f.write(0xFF.to_bytes(1, 'little'))
                         if self.state[0] != 0xFF:
                             f.write(self.state)
                         else:
                             f.write(b'undefined')
             else:
                 with open('/home/sh2/exe/new_api_plugin/history/' + filename, 'wb') as f:
-                    f.write(0xFF.to_bytes(1, 'big'))
-                    f.write(round(time.time()).to_bytes(4, 'big', signed=False))
-                    f.write(0xFF.to_bytes(1, 'big'))
+                    f.write(0xFF.to_bytes(1, 'little'))
+                    f.write(round(time.time()).to_bytes(4, 'little', signed=False))
+                    f.write(0xFF.to_bytes(1, 'little'))
                     if self.state is not None and self.state[0] != 0xFF:
                         f.write(self.state)
                     else:
@@ -91,14 +89,10 @@ class Item:
         else:
             return False
 
-        # if self.addr and self.type:
-        #     if time.time() - self.state_timestamp < 60:
-        #         pass
 
     # .hst structure:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
-    # not tested
     def read_history(self) -> Union[None, dict]:
         if self.type in hst_supported_types.keys():
             id, subid = self.addr.split(':')
@@ -113,7 +107,8 @@ class Item:
                     hst_bytes = f.read()
                 if hst_bytes:
                     while hst_bytes:
-                        _, timestamp, __ = struct.unpack("BIB", hst_bytes[:6])
+                        _ = hst_bytes[0]
+                        timestamp, __ = struct.unpack("IB", hst_bytes[1:6])
                         hst_bytes = hst_bytes[6:]
                         if _ != 0xFF or __ != 0xFF:
                             return None
@@ -122,12 +117,14 @@ class Item:
                                 parsed_hst[timestamp] = hst_bytes[:index - 1]
                                 hst_bytes = hst_bytes[index - 1:]
                                 break
-                        if parsed_hst[timestamp] == b'undefined':
+                        if not parsed_hst:
+                            parsed_hst[timestamp] = hst_bytes
+                            hst_bytes = b''
+                        if parsed_hst[timestamp][0] == 0xFF:
                             parsed_hst[timestamp] = None
-                    return hst_bytes
+                    return parsed_hst
         return None
 
-    # not tested
     def get_history(self, start_time, end_time, scale, wait=False) -> Union[None, list]:
         hst = self.read_history()
 
@@ -163,9 +160,9 @@ class Item:
                 cntr += scale
             return result
         return None
-        # for timestamp, part in hst.items():
 
-    # not tested
+    # https://github.com/MimiSmart/new_api_plugin/commit/bfc1a0cd0f9c92bd8118142e51557d852903a731
+    # если нужно будет пилить парсилку для get_state - смотреть этот коммит
     def split_state_by_type(self, states):
         # switch пропускаю т.к. он стейт присылает только при нажатии и история, собираемая раз в минуту будет бесполезной
         split_states = []
@@ -193,7 +190,7 @@ class Item:
                 # opt3 - дробная установленная
                 # opt4 - целая установленная
                 {
-                    'on': 1 if states[index]==0xFA else 0,
+                    'on': 1 if states[index] == 0xFA else 0,
                     'set_temperature': round(states[index + 4] + (states[index + 3] / 255.0), 2),
                     'sensor_temperature': round(states[index + 2] + (states[index + 1] / 255.0), 2)
                 }
@@ -206,9 +203,9 @@ class Item:
                 tmp = {'state': None}
                 if not item:
                     tmp['state'] = 'close'
-                elif item==0x7D:
+                elif item == 0x7D:
                     tmp['state'] = 'half opened'
-                elif item==0xFA:
+                elif item == 0xFA:
                     tmp['state'] = 'opened'
                 else:
                     tmp['state'] = 'undefined'

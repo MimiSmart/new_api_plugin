@@ -206,13 +206,13 @@ class SHClient:
                             dataLength -= length
                             if addr in self.logic.items:
                                 self.logic.items[addr].state = data['data']
-                                self.logic.items[addr].state_timestamp = round(time.time())
+                                # self.logic.items[addr].state_timestamp = round(time.time())
                     elif PD == 7:
                         data = self.fread(dataLength)
                         addr = str(senderId) + ':' + str(senderSubId)
                         if addr in self.logic.items:
                             self.logic.items[addr].state = data['data']
-                            self.logic.items[addr].state_timestamp = round(time.time())
+                            # self.logic.items[addr].state_timestamp = round(time.time())
                     # skip other packets
                     else:
                         self.fread(dataLength)
