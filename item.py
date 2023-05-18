@@ -10,10 +10,9 @@ hst_supported_types = {
     'door-sensor': 1,
     'dimer-lamp': 2,
     'dimmer-lamp': 2,
-    'rgb-lamp': 4,
+    'rgb-lamp': 1,
     'valve-heating': 6,
     'conditioner': 6,
-    'ventilation': 6,
     'blinds': 1,
     'gate': 1,
     'jalousie': 1,
@@ -129,22 +128,19 @@ class Item:
         return None
 
     # not tested
-    def get_history(self, start_time, end_time, scale):
+    def get_history(self, start_time, end_time, scale, wait=False) -> Union[None, list]:
         hst = self.read_history()
-        if hst.keys()[0] < start_time:
-            logic.history[self.addr] = {
-                'requested': False,
-                'range_time': [start_time, end_time],
-                'scale': scale
-            }
-            while 1:
+
+        if wait:
+            cntr = 0
+            while cntr < 10:
                 time.sleep(0.1)
                 if self.history:
                     result = self.split_state_by_type(self.history)
                     self.history = None
                     return result
-
-        else:
+                cntr += 1
+        elif hst and hst.keys()[0] >= start_time:
             # парсим историю и определяем с какой временной метки в истории начинать
             keys = hst.keys()
             for key in keys:
@@ -166,6 +162,7 @@ class Item:
                 result.append(hst[keys[index]][cntr])
                 cntr += scale
             return result
+        return None
         # for timestamp, part in hst.items():
 
     # not tested
@@ -177,39 +174,48 @@ class Item:
         if self.type in ['lamp', 'script', 'valve', 'door-sensor']:
             split_states = [{'state': item & 1} for item in states]
         elif self.type in ['dimmer-lamp', 'dimer-lamp']:
-            split_states = [{'on': (item >> 8) & 1, 'brightness': item & 0xFF} for item in states]
-        elif self.type == 'rgb-lamp':
             split_states = [
-                {'on': (item >> 24) & 1,
-                 'value': (item >> 16) & 0xFF,
-                 'saturation': (item >> 8) & 0xFF,
-                 'hue': item & 0xFF
+                {'on': states[index] & 1, 'brightness': round(int((states[index + 1]) * 100 / 255.0), 1)} for
+                index in
+                range(0, len(states), 2)]
+        elif self.type == 'rgb-lamp':
+            # rgb in old history save only value (brightness)
+            split_states = [
+                {'on': item > 0,
+                 'value': item if item > 0 else 0
                  }
                 for item in states]
         elif self.type == 'valve-heating':
             split_states = [
+                # opt0 - видимо вкл/выкл, 0xFA на вкл
+                # opt1 - дробная сенсора
+                # opt2 - целая сенсора
+                # opt3 - дробная установленная
+                # opt4 - целая установленная
                 {
-                    'on': (item >> 40) & 1,
-                    'set_temperature': round((item >> 32) + (((item >> 24) & 0xFF) / 255.0), 2),
-                    'sensor_temperature': round((item >> 16) + (((item >> 8) & 0xFF) / 255.0), 2),
-                    'num_automation': item
+                    'on': 1 if states[index]==0xFA else 0,
+                    'set_temperature': round(states[index + 4] + (states[index + 3] / 255.0), 2),
+                    'sensor_temperature': round(states[index + 2] + (states[index + 1] / 255.0), 2)
                 }
-                for item in states]
-        elif self.type in ['conditioner', 'ventilation']:
-            split_states = [
-                {
-                    'on': (item >> 40) & 1,
-                    'mode': item >> 44,
-                    'temperature': item >> 32,  # нужно добавить t-min
-                    'vane-hor': (item >> 16) & 0x0F,
-                    'vane-ver': (item >> 16) & 0xF0,
-                    'fan': (item >> 8) & 0x0F
-                }
-                for item in states]
+                for index in range(0, len(states), 5)]
+        elif self.type in 'conditioner':
+            split_states = [{'temperature': states[i]} for i in range(4, len(states), 5)]
         elif self.type in ['jalousie', 'blinds', 'gate']:
-            split_states = [{'state': item} for item in states]
+            split_states = []
+            for item in states:
+                tmp = {'state': None}
+                if not item:
+                    tmp['state'] = 'close'
+                elif item==0x7D:
+                    tmp['state'] = 'half opened'
+                elif item==0xFA:
+                    tmp['state'] = 'opened'
+                else:
+                    tmp['state'] = 'undefined'
+                split_states.append(tmp)
         elif self.type in ['temperature-sensor', 'motion-sensor', 'illumination-sensor', 'humidity-sensor']:
-            split_states = [{'state': round((item >> 8) + ((item & 0xFF) / 255.0), 2)} for item in states]
+            split_states = [{'state': round(states[index + 1] + (states[index] / 255.0), 2)} for index in
+                            range(0, len(states), 2)]
         elif self.type == 'leak-sensor':
             split_states = [{'state': item} for item in states]
         return split_states

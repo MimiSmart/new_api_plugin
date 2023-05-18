@@ -55,15 +55,21 @@ def set_state(logic: Logic, args):
     logic.set_queue.append((args['addr'], args['state']))
 
 
-# пока делаю на 1 коннект, допилить по много
 def get_history(logic: Logic, args):
-    logic.history[args['addr']] = {
-        'value': list(),
-        'client': args['client'],
-        'requested': False,
-        'range_time': args['range_time'],
-        'scale': args['scale']
-    }
+    # если история есть в .hst2 то берем оттуда
+    if args['addr'] not in logic.items:
+        return {"type": "error", "message": "Item not found"}
+    hst = logic.items[args['addr']].get_history(*args['range_time'], args['scale'])
+    if hst:
+        return {"type": "response", "addr": args['addr'], "history": hst}
+    else:
+        # иначе формируем запрос к серверу, ответ будет отправлен клиенту из потока обработчика подписок
+        logic.history[args['addr']] = {
+            'client': args['client'],
+            'requested': False,
+            'range_time': args['range_time'],
+            'scale': args['scale']
+        }
 
 
 class SubscribeWebsocket:
@@ -315,12 +321,12 @@ def listener():
                 copy = logic.history.copy()
                 for key, item in copy.items():
                     if 'responsed' in item:
-                        values = item['value']
-                        # values = [round((item >> 8) + ((item & 0xFF) / 255.0), 2) for item in values]  # for temp sensor
-                        response = {'type': 'response', 'history': values, 'addr': key}
-                        asyncio.run(send_message(item['client'],
-                                                 json.dumps(response, ensure_ascii=False)))  # if client connected
-                        logic.history.pop(key)
+                        if logic.items[key].history:
+                            hst = logic.items[key].get_history(*item['range_time'], item['scale'], wait=True)
+                            response = {'type': 'response', 'history': hst, 'addr': key}
+                            asyncio.run(send_message(item['client'],
+                                                     json.dumps(response, ensure_ascii=False)))  # if client connected
+                            logic.history.pop(key)
             if subscribes[index].event_msg:
                 pass
             if subscribes[index].event_logic['logic'] and logic.update_flag:

@@ -1,5 +1,4 @@
 # app.py
-import time
 from typing import Annotated
 
 from fastapi import FastAPI, Body
@@ -82,16 +81,19 @@ def set_state(item: SetState):
 
 @app.post("/item/get_history/", tags=['rest api'], summary="Set state on item")
 def get_history(args: GetHistory):
-    # добавить обработку, если уже есть такой запрос но от другого клиента
-    logic.history[args.addr] = {
-        'value': list(),
-        'client': 'rest',
-        'requested': False,
-        'range_time': args.range_time,
-        'scale': args.scale
-    }
-    for i in range(2):
-        time.sleep(0.5)
-        if logic.history[args.addr]['value']:
-            return {"type":"response","addr":args.addr,"history":logic.history[args.addr]['value']}
-    return {"type":"error","message":"No history, return by timeout"}
+    # если история есть в .hst2 то берем оттуда
+    if args.addr not in logic.items:
+        return {"type": "error", "message": "Item not found"}
+    hst = logic.items[args.addr].get_history(*args.range_time, args.scale)
+    if hst:
+        return {"type": "response", "addr": args.addr, "history": hst}
+    else:
+        # иначе формируем запрос к серверу и ждем ответа с таймаутом 1 сек
+        logic.history[args.addr] = {
+            'requested': False,
+            'range_time': args.range_time,
+            'scale': args.scale
+        }
+        hst = logic.items[args.addr].get_history(*args.range_time, args.scale, wait=True)
+        return {"type": "response", "addr": args.addr, "history": hst}
+    return {"type": "error", "message": "No history, return by timeout"}
