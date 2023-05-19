@@ -76,6 +76,7 @@ def history_writer(state=None):
             time.sleep(60)
             for item in logic.items.values():
                 if item.type != 'switch' and item.state:
+                    logic.history_events[item.addr] = item.state  # дописать парсилку
                     item.write_history()
 
 

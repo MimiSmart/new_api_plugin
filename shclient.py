@@ -151,12 +151,12 @@ class SHClient:
         cntr = 0
         while True:
             # тут проверяются запросы на историю итемов
-            if self.logic.history:
-                for addr in self.logic.history.keys():
-                    if not self.logic.items[addr].history and not self.logic.history[addr]['requested']:
-                        self.logic.history[addr]['requested'] = True
-                        self.getDeviceHistory(addr, self.logic.history[addr]['range_time'],
-                                              self.logic.history[addr]['scale'])
+            if self.logic.history_requests:
+                for addr in self.logic.history_requests.keys():
+                    if not self.logic.items[addr].history and not self.logic.history_requests[addr]['requested']:
+                        self.logic.history_requests[addr]['requested'] = True
+                        self.getDeviceHistory(addr, self.logic.history_requests[addr]['range_time'],
+                                              self.logic.history_requests[addr]['scale'])
 
             # тут освобождается очередь сетстатусов
             while self.logic.set_queue:
@@ -189,8 +189,8 @@ class SHClient:
                     id, subid, data = struct.unpack("HB%ds" % (len(line['data']) - 3), line['data'])
                     addr = str(id) + ':' + str(subid)
                     self.logic.items[addr].history = list(struct.unpack("%dB" % (len(data)), data))
-                    if addr in self.logic.history:
-                        self.logic.history[addr]['responsed'] = True
+                    if addr in self.logic.history_requests:
+                        self.logic.history_requests[addr]['responsed'] = True
                 else:
                     senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
                                                                                                       data["data"])

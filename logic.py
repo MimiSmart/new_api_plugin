@@ -23,8 +23,11 @@ class Logic:
     items: Dict[str, Item] = dict()
 
     set_queue = list()
-    # в history по запросу будет загружаться история элемента, при ответе на запрос очищаться
-    history = dict()
+    # в history_requests закидываются запросы на историю к серверу через shclient
+    history_requests = dict()
+    # в history_events закидываются стейты, которые были дописаны в историю, которые нужно отправить по подписке
+    history_events = dict()
+
     # этот флаг нужен для безопасной работы с данными между потоками.
     # если False, то работает функция logic.update
     # если True, то функция logic.update не работает, работает рассылка подписки через ws
@@ -154,7 +157,7 @@ class Logic:
             # без него было бы
             # f.write(prettify(dict_to_etree(Dict)).encode('utf-8'))
             xml_logic = self._prettify(xml_logic).replace('#amp', '&')
-            xml_logic = xml_logic.replace('&quot;','"')
+            xml_logic = xml_logic.replace('&quot;', '"')
             f.write(self._header)
             for line in xml_logic.split("\n")[1:]:
                 f.write((line + "\n").encode('utf-8'))

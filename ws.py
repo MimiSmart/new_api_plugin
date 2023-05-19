@@ -64,7 +64,7 @@ def get_history(logic: Logic, args):
         return {"type": "response", "addr": args['addr'], "history": hst}
     else:
         # иначе формируем запрос к серверу, ответ будет отправлен клиенту из потока обработчика подписок
-        logic.history[args['addr']] = {
+        logic.history_requests[args['addr']] = {
             'client': args['client'],
             'requested': False,
             'range_time': args['range_time'],
@@ -252,8 +252,56 @@ def subscriber(index, args):
         # remove last \n
         if len(msg['event_items']):
             msg['event_items'] = msg['event_items'][:-1]
-    # if 'event_statistics' in args:
-    #     subscribes[index].event_statistics = args['event_statistics']
+    if 'event_statistics' in args:
+        msg['event_statistics'] = ''
+        if isinstance(args['event_statistics'], str):
+            if ':' in args['event_statistics']:
+                args['event_statistics'] = [args['event_statistics']]
+            elif args['event_statistics'] == 'all':
+                if args['command'] == 'subscribe':
+                    # append all existed items to subscribe
+                    for item in logic.items.values():
+                        subscribes[index].event_statistics.append(item.addr)
+                    # remove duplicates
+                    subscribes[index].event_statistics = \
+                        list(set(subscribes[index].event_statistics))
+                    msg['event_statistics'] += "Subscribe all success\n"
+                # unsubscribe
+                else:
+                    for x in range(len(subscribes[index].event_statistics)):
+                        subscribes[index].event_statistics.pop()
+                    msg['event_statistics'] += "Unsubscribe all success\n"
+            else:
+                msg['event_statistics'] += "'event_statistics' supported only 'all', str addr or list of items\n"
+        if isinstance(args['event_statistics'], list):
+            if args['command'] == 'subscribe':
+                # search all existed items in logic
+                items = [item.addr for item in logic.items.values()]
+                # search for subscribed items in existed items
+                for item in args['event_statistics']:
+                    if item in items:
+                        subscribes[index].event_statistics.append(item)
+                    else:
+                        msg['event_statistics'] += "Item %s not found in logic\n" % (str(item))
+                # remove duplicates
+                subscribes[index].event_statistics = \
+                    list(set(subscribes[index].event_statistics))
+                if not msg['event_statistics']:
+                    msg['event_statistics'] += "Subscribe success\n"
+            # unsubscribe
+            else:
+                not_found_items = []
+                for item in args['event_statistics']:
+                    # 'try' block need if item not in list
+                    try:
+                        subscribes[index].event_statistics.remove(item)
+                    except:
+                        not_found_items.append(item)
+                if len(not_found_items):
+                    msg['event_statistics'] += "Subscription items %s not found!\n" % (str(not_found_items))
+                else:
+                    msg['event_statistics'] += "Unsubscribe success\n"
+        # subscribes[index].event_statistics = args['event_statistics']
     return msg
 
 
@@ -317,8 +365,8 @@ def listener():
     while True:
         length = len(subscribes)
         for index in range(length):
-            if logic.history:
-                copy = logic.history.copy()
+            if logic.history_requests:
+                copy = logic.history_requests.copy()
                 for key, item in copy.items():
                     if 'responsed' in item:
                         if logic.items[key].history:
@@ -326,7 +374,7 @@ def listener():
                             response = {'type': 'response', 'history': hst, 'addr': key}
                             asyncio.run(send_message(item['client'],
                                                      json.dumps(response, ensure_ascii=False)))  # if client connected
-                            logic.history.pop(key)
+                            logic.history_requests.pop(key)
             if subscribes[index].event_msg:
                 pass
             if subscribes[index].event_logic['logic'] and logic.update_flag:
@@ -363,7 +411,15 @@ def listener():
                                 'data': msg}
                     asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_statistics:
-                pass
+                if logic.history_events:
+                    msg = dict()
+                    for addr, state in logic.history_events.items():
+                        if addr in subscribes[index].event_statistics:
+                            msg[addr] = state.hex(' ')  # debug
+                    # упаковываем все однотипные ивенты в 1 пакет
+                    if msg:
+                        response = {'type': 'subscribe-event', 'event_type': "statistics", 'data': msg}
+                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
 
         # avoid exception: 'dictionary changed size during iteration'
         tmp_items = logic.items.copy()
@@ -378,6 +434,9 @@ def listener():
             for addr, item in logic.items.items():
                 item.update = False
             logic.update_flag = False
+
+        if logic.history_events:
+            logic.history_events = dict()
 
         time.sleep(0.3)
 

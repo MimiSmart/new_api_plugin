@@ -89,7 +89,7 @@ def get_history(args: GetHistory):
         return {"type": "response", "addr": args.addr, "history": hst}
     else:
         # иначе формируем запрос к серверу и ждем ответа с таймаутом 1 сек
-        logic.history[args.addr] = {
+        logic.history_requests[args.addr] = {
             'requested': False,
             'range_time': args.range_time,
             'scale': args.scale
