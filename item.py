@@ -89,7 +89,6 @@ class Item:
         else:
             return False
 
-
     # .hst structure:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
@@ -137,9 +136,9 @@ class Item:
                     self.history = None
                     return result
                 cntr += 1
-        elif hst and hst.keys()[0] >= start_time:
+        elif hst and list(hst.keys())[0] >= start_time:
             # парсим историю и определяем с какой временной метки в истории начинать
-            keys = hst.keys()
+            keys = list(hst.keys())
             for key in keys:
                 hst[key] = self.split_state_by_type(hst[key])
             index = 0
