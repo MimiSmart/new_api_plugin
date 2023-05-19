@@ -145,7 +145,6 @@ class SHClient:
                 s += struct.pack("B", value[i])
         return s
 
-    # get single device state
     def listener(self):
         print("Started listen packets")
         cntr = 0
@@ -163,6 +162,23 @@ class SHClient:
                 addr, state = self.logic.set_queue[0]
                 self.logic.set_queue.pop(0)
                 self.setStatus(addr, state)
+
+            # тут отправляются пуши
+            for push in self.logic.push_requests:
+                try:
+                    tmp = push
+                    self.logic.push_requests.pop(0)
+                    self.sendMessage(
+                        tmp['message'],
+                        tmp['message_type'],
+                        tmp['id'],
+                        tmp['subid']
+                    )
+                except:
+                    print(''.join(
+                        ["Error send message on ", str(push['id']), ':', str(push['subid']), ', with type message = ',
+                         str(push['message_type']), ' and text message: "', push['message'], '"']))
+                    break
 
             # ping server to avoid kick by timeout
             if cntr >= 60:
@@ -310,24 +326,13 @@ class SHClient:
             print("Exception appeared. Couldn't write to socket next data: ", str(data))
         print("history request send")
 
+    def sendMessage(self, message, message_type=1, id=2047, subid=32):
+        if not self.runSuccess: return False
+        length = 1 + len(message)
+        data = self.packData(id, subid, 5, length, [ord(char) for char in chr(message_type) + message])
+        if not self.connectionResource.send(data):
+            print(''.join(
+                ["Error send message on ", str(id), ':', str(subid), ', with type message = ', str(message_type),
+                 ' and text message: "', message, '"']))
     # def getDisplayedDevices(self):
     #         query = '#area[not(@permissions)]/item[@type!="rtsp" and @type!="remote-control" and @type!="multi-room" and @type!="virtual"]'
-
-# # try:
-# shClient = SHClient("", "", "1234567890123456", LogicPath)
-# shClient.readFromBlockedSocket = True
-# if shClient.run():
-#     print("shclient run\n")
-#     items = dict()
-#     for id in [789]:
-#         shClient.requestAllDevicesState(id)
-#         # from threading import Thread
-#         # shClient_thread = Thread(target=shClient.listener,args=[items])
-#         # shClient_thread.start()
-#         shClient.listener(items)
-#         # while True:
-#         #     time.sleep(1)
-#         #     pprint(items.keys())
-#     shClient.disconnect()
-# # except:
-# # print("No connection to shs server")

@@ -31,3 +31,9 @@ class GetHistory(BaseModel):
     addr: str
     range_time: list
     scale: int
+
+
+class SendMessage(BaseModel):
+    addr: str
+    message_type: int
+    message: str

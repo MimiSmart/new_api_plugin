@@ -15,47 +15,40 @@ def init_logic(_logic: Logic):
     logic = _logic
 
 
-def test(logic: Logic, args):
-    return {
-        'type': 'response',
-        'message': "test completed"
-    }
-
-
-def get_items(logic: Logic, args):
+def get_items(args):
     return {
         'type': 'response',
         'data': logic.get_dict()
     }
 
 
-def get_item(logic: Logic, args):
+def get_item(args):
     return logic.get_item(*args.values())
 
 
-def set_item(logic: Logic, args):
+def set_item(args):
     return logic.set_item(*args.values())
 
 
-def del_item(logic: Logic, args):
+def del_item(args):
     return logic.del_item(*args.values())
 
 
-def get_state(logic: Logic, args):
+def get_state(args):
     return logic.get_state(*args.values())
 
 
-def get_all_states(logic: Logic, args):
+def get_all_states(args):
     return logic.get_all_states()
 
 
-def set_state(logic: Logic, args):
+def set_state(args):
     args['state'] = [int(args['state'][i:i + 2]) for i in
                      range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
     logic.set_queue.append((args['addr'], args['state']))
 
 
-def get_history(logic: Logic, args):
+def get_history(args):
     # если история есть в .hst2 то берем оттуда
     if args['addr'] not in logic.items:
         return {"type": "error", "message": "Item not found"}
@@ -70,6 +63,16 @@ def get_history(logic: Logic, args):
             'range_time': args['range_time'],
             'scale': args['scale']
         }
+
+
+def send_message(args):
+    try:
+        id, subid = args['addr'].split(':')
+        logic.push_requests.append(
+            {'id': int(id), 'subid': int(subid), 'message_type': args['message_type'], 'message': args['message']})
+        return {"type": "response", "message": 'Push-message send successfully'}
+    except:
+        return {"type": "error", "message": "Invalid data"}
 
 
 class SubscribeWebsocket:
@@ -305,7 +308,7 @@ def subscriber(index, args):
     return msg
 
 
-async def send_message(websocket, message):
+async def ws_send_message(websocket, message):
     # if connected state
     if websocket.client_state.value == 1:
         await websocket.send_text(message)
@@ -319,7 +322,7 @@ def find_index(websocket):
 
 
 async def endpoint(websocket: WebSocket):
-    global subscribes, commands, logic
+    global subscribes, commands
     # добавление нового коннекшна
     subscribes.append(SubscribeWebsocket(websocket))
     await websocket.accept()
@@ -344,7 +347,7 @@ async def endpoint(websocket: WebSocket):
                             data['client'] = websocket
                         cmd = data['command']
                         data.pop('command')
-                        reply = commands[cmd](logic, data)
+                        reply = commands[cmd](data)
                 else:
                     reply = {'type': 'error', 'message': 'Command not found!'}
 
@@ -372,8 +375,9 @@ def listener():
                         if logic.items[key].history:
                             hst = logic.items[key].get_history(*item['range_time'], item['scale'], wait=True)
                             response = {'type': 'response', 'history': hst, 'addr': key}
-                            asyncio.run(send_message(item['client'],
-                                                     json.dumps(response, ensure_ascii=False)))  # if client connected
+                            asyncio.run(ws_send_message(item['client'],
+                                                        json.dumps(response,
+                                                                   ensure_ascii=False)))  # if client connected
                             logic.history_requests.pop(key)
             if subscribes[index].event_msg:
                 pass
@@ -382,11 +386,13 @@ def listener():
                     if 'json' in subscribes[index].event_logic['response_type']:
                         msg = logic.get_dict()
                         response = {'type': 'subscribe-event', 'event_type': "logic_json_update", 'data': msg}
-                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                        asyncio.run(
+                            ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
                     if 'xml' in subscribes[index].event_logic['response_type']:
                         msg = logic.get_xml().decode('utf-8')
                         response = {'type': 'subscribe-event', 'event_type': "logic_xml_update", 'data': msg}
-                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                        asyncio.run(
+                            ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_logic['items'] and logic.update_flag:
                 msg = dict()
                 for addr in subscribes[index].event_logic['items']:
@@ -396,7 +402,7 @@ def listener():
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "logic_item_update",
                                 'data': msg}
-                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                    asyncio.run(ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_items:
                 msg = dict()
                 for addr in subscribes[index].event_items:
@@ -409,7 +415,7 @@ def listener():
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "state_item",
                                 'data': msg}
-                    asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                    asyncio.run(ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_statistics:
                 if logic.history_events:
                     msg = dict()
@@ -419,7 +425,8 @@ def listener():
                     # упаковываем все однотипные ивенты в 1 пакет
                     if msg:
                         response = {'type': 'subscribe-event', 'event_type': "statistics", 'data': msg}
-                        asyncio.run(send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                        asyncio.run(
+                            ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
 
         # avoid exception: 'dictionary changed size during iteration'
         tmp_items = logic.items.copy()
@@ -442,7 +449,6 @@ def listener():
 
 
 commands = {
-    "test": test,
     "get_items": get_items,
     "set_item": set_item,
     "del_item": del_item,
@@ -450,6 +456,7 @@ commands = {
     "get_all_states": get_all_states,
     "set_state": set_state,
     "get_history": get_history,
+    "send_message": send_message,
     "subscribe": subscriber,
     "unsubscribe": subscriber
 }
