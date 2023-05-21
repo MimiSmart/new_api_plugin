@@ -229,6 +229,17 @@ class SHClient:
                         if addr in self.logic.items:
                             self.logic.items[addr].state = data['data']
                             # self.logic.items[addr].state_timestamp = round(time.time())
+                    # push-message
+                    elif destId in [self.initClientID, 2047] and destSubId == 32:
+                        data = self.fread(dataLength)['data']
+                        type_message = data[0]
+                        message = data[1:-1]
+                        self.logic.push_events.append({'type': type_message, 'message': message.decode('utf-8'),
+                                                       'sender': ''.join([str(senderId), ':', str(senderSubId)])})
+                        print(''.join(["Received push message on ", str(senderId), ':', str(senderSubId), ' from ',
+                                       str(destId), ':', str(destSubId), ', with type message is ',
+                                       str(type_message),
+                                       ' and text message: ', message.decode('utf-8')]))
                     # skip other packets
                     else:
                         self.fread(dataLength)

@@ -80,13 +80,13 @@ class SubscribeWebsocket:
     event_logic: dict
     event_items: list
     event_statistics: list
-    event_msg: bool
+    event_msg: list
 
     def __init__(self, websocket: WebSocket,
                  event_logic: dict = None,
                  event_items: list = None,
                  event_statistics: list = None,
-                 event_msg: bool = False):
+                 event_msg: list = None):
         self.websocket = websocket
         if event_logic is None:
             self.event_logic = {'logic': False, 'response_type': [], 'items': []}
@@ -100,7 +100,10 @@ class SubscribeWebsocket:
             self.event_statistics = list()
         else:
             self.event_statistics = event_statistics
-        self.event_msg = event_msg
+        if event_msg is None:
+            self.event_msg = list()
+        else:
+            self.event_msg = event_msg
 
 
 def subscriber(index, args):
@@ -194,11 +197,29 @@ def subscriber(index, args):
             msg['event_logic'] = msg['event_logic'][:-1]
     if 'event_msg' in args:
         if args['command'] == 'subscribe':
-            subscribes[index].event_msg = True
+            if args['event_msg'] == 'all':
+                for i in range(0x90):
+                    subscribes[index].event_msg.append(i)
+            else:
+                if not isinstance(args['event_msg'], list):
+                    args['event_msg'] = [args['event_msg']]
+                for msg in args['event_msg']:
+                    subscribes[index].event_msg.append(msg)
+            # remove duplicates
+            subscribes[index].event_msg = list(set(subscribes[index].event_msg))
             msg['event_msg'] = 'Subscribe success'
+        # unsubscribe
         else:
-            subscribes[index].event_msg = False
+            if args['event_msg'] == 'all':
+                subscribes[index].event_msg = list()
+            else:
+                if not isinstance(args['event_msg'], list):
+                    args['event_msg'] = [args['event_msg']]
+                for msg in args['event_msg']:
+                    index = subscribes[index].event_msg.index(msg)
+                    subscribes[index].event_msg.pop(index)
             msg['event_msg'] = 'Unsubscribe success'
+
     if 'event_items' in args:
         msg['event_items'] = ''
         # if event_items is string addr of item, then make list with this one addr
@@ -371,16 +392,23 @@ def listener():
             if logic.history_requests:
                 copy = logic.history_requests.copy()
                 for key, item in copy.items():
-                    if 'responsed' in item:
-                        if logic.items[key].history:
-                            hst = logic.items[key].get_history(*item['range_time'], item['scale'], wait=True)
-                            response = {'type': 'response', 'history': hst, 'addr': key}
-                            asyncio.run(ws_send_message(item['client'],
-                                                        json.dumps(response,
-                                                                   ensure_ascii=False)))  # if client connected
-                            logic.history_requests.pop(key)
+                    if 'responsed' in item and logic.items[key].history:
+                        hst = logic.items[key].get_history(*item['range_time'], item['scale'], wait=True)
+                        response = {'type': 'response', 'history': hst, 'addr': key}
+                        asyncio.run(ws_send_message(item['client'],
+                                                    json.dumps(response, ensure_ascii=False)))  # if client connected
+                        logic.history_requests.pop(key)
             if subscribes[index].event_msg:
-                pass
+                pushes = list()
+                for push in logic.push_events:
+                    if push['type'] in subscribes[index].event_msg:
+                        pushes.append(push)
+                # упаковываем все однотипные ивенты в 1 пакет
+                if pushes:
+                    response = {'type': 'subscribe-event', 'event_type': "push_message",
+                                'data': pushes}
+                    asyncio.run(
+                        ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
             if subscribes[index].event_logic['logic'] and logic.update_flag:
                 if logic.logic_update:
                     if 'json' in subscribes[index].event_logic['response_type']:
@@ -444,6 +472,9 @@ def listener():
 
         if logic.history_events:
             logic.history_events = dict()
+
+        if logic.push_events:
+            logic.push_events = list()
 
         time.sleep(0.3)
 
