@@ -222,12 +222,22 @@ class SHClient:
                             dataLength -= length
                             if addr in self.logic.items:
                                 self.logic.items[addr].state = data['data']
+
+                                # свитч записывается в историю сразу при изменении
+                                if self.logic.items[addr].type == 'switch':
+                                    self.logic.items[addr].write_history()
+
                                 # self.logic.items[addr].state_timestamp = round(time.time())
                     elif PD == 7:
                         data = self.fread(dataLength)
                         addr = str(senderId) + ':' + str(senderSubId)
                         if addr in self.logic.items:
                             self.logic.items[addr].state = data['data']
+
+                            # свитч записывается в историю сразу при изменении
+                            if self.logic.items[addr].type == 'switch':
+                                self.logic.items[addr].write_history()
+
                             # self.logic.items[addr].state_timestamp = round(time.time())
                     # push-message
                     elif destId in [self.initClientID, 2047] and destSubId == 32:
@@ -335,7 +345,7 @@ class SHClient:
         data = struct.pack("L", xmlsize) + xml.encode('utf-8')
         if not self.connectionResource.send(data):
             print("Exception appeared. Couldn't write to socket next data: ", str(data))
-        print("history request send")
+        print("shclient: history request send")
 
     def sendMessage(self, message, message_type=1, id=2047, subid=32):
         if not self.runSuccess: return False

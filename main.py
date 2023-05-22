@@ -67,17 +67,13 @@ print('Thread [3/4] starting...')
 threads[2].start()
 
 
-def history_writer(state=None):
-    # костыль для свитча. состояние свитча записывается при изменении
-    if state:
-        pass
-    else:
-        while True:
-            time.sleep(60)
-            for item in logic.items.values():
-                if item.type != 'switch' and item.state:
-                    logic.history_events[item.addr] = item.state  # дописать парсилку
-                    item.write_history()
+def history_writer():
+    while True:
+        time.sleep(60)
+        for item in logic.items.values():
+            if item.type != 'switch' and item.state:
+                logic.history_events[item.addr] = item.state  # дописать парсилку
+                item.write_history()
 
 
 threads.append(Thread(target=history_writer, name='history writer', daemon=True))

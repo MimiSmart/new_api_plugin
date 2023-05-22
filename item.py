@@ -22,6 +22,7 @@ hst_supported_types = {
     'humidity-sensor': 2,
     'voltage-sensor': 2,
     'leak-sensor': 1,
+    'switch': 1
 }
 
 
@@ -58,34 +59,44 @@ class Item:
             id, subid = self.addr.split(':')
             # make filename
             filename = (4 - len(id)) * '0' + id + '-' + (3 - len(subid)) * '0' + subid + ' ' + self.type + '.hst2'
-            if os.path.exists('/home/sh2/exe/new_api_plugin/history/' + filename):
-                hst = self.read_history()
-                if hst is None:
-                    return False
-                key = list(hst.keys())
-                key.sort()
-                key = key[-1]
+            if self.type == 'switch':
+                if not os.path.exists('/home/sh2/exe/new_api_plugin/history/' + filename):
+                    open('/home/sh2/exe/new_api_plugin/history/' + filename, 'wb').close()
                 with open('/home/sh2/exe/new_api_plugin/history/' + filename, 'ab') as f:
-                    # if item wasn`t undefined and cur state is not undefined
-                    if hst[key] is not None and self.state[0] != 0xFF:
-                        f.write(self.state)
-                    else:
+                    if self.state is not None:
                         f.write(0xFF.to_bytes(1, 'little'))
                         f.write(round(time.time()).to_bytes(4, 'little', signed=False))
                         f.write(0xFF.to_bytes(1, 'little'))
-                        if self.state[0] != 0xFF:
+                        f.write(self.state)
+            else:
+                if os.path.exists('/home/sh2/exe/new_api_plugin/history/' + filename):
+                    hst = self.read_history()
+                    if hst is None:
+                        return False
+                    key = list(hst.keys())
+                    key.sort()
+                    key = key[-1]
+                    with open('/home/sh2/exe/new_api_plugin/history/' + filename, 'ab') as f:
+                        # if item wasn`t undefined and cur state is not undefined
+                        if hst[key] is not None and self.state[0] != 0xFF:
+                            f.write(self.state)
+                        else:
+                            f.write(0xFF.to_bytes(1, 'little'))
+                            f.write(round(time.time()).to_bytes(4, 'little', signed=False))
+                            f.write(0xFF.to_bytes(1, 'little'))
+                            if self.state[0] != 0xFF:
+                                f.write(self.state)
+                            else:
+                                f.write(b'undefined')
+                else:
+                    with open('/home/sh2/exe/new_api_plugin/history/' + filename, 'wb') as f:
+                        f.write(0xFF.to_bytes(1, 'little'))
+                        f.write(round(time.time()).to_bytes(4, 'little', signed=False))
+                        f.write(0xFF.to_bytes(1, 'little'))
+                        if self.state is not None and self.state[0] != 0xFF:
                             f.write(self.state)
                         else:
                             f.write(b'undefined')
-            else:
-                with open('/home/sh2/exe/new_api_plugin/history/' + filename, 'wb') as f:
-                    f.write(0xFF.to_bytes(1, 'little'))
-                    f.write(round(time.time()).to_bytes(4, 'little', signed=False))
-                    f.write(0xFF.to_bytes(1, 'little'))
-                    if self.state is not None and self.state[0] != 0xFF:
-                        f.write(self.state)
-                    else:
-                        f.write(b'undefined')
         else:
             return False
 
