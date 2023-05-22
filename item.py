@@ -113,40 +113,43 @@ class Item:
                             return None
                         for index in range(len(hst_bytes)):
                             if hst_bytes[index] == 0xFF and index + 5 < len(hst_bytes) and hst_bytes[index + 5] == 0xFF:
-                                parsed_hst[timestamp] = hst_bytes[:index - 1]
-                                hst_bytes = hst_bytes[index - 1:]
+                                parsed_hst[timestamp] = hst_bytes[:index]
+                                hst_bytes = hst_bytes[index:]
                                 break
-                        if not parsed_hst:
+                        if timestamp not in parsed_hst:
                             parsed_hst[timestamp] = hst_bytes
                             hst_bytes = b''
-                        if parsed_hst[timestamp][0] == 0xFF:
-                            parsed_hst[timestamp] = None
+                        if parsed_hst[timestamp] == b'undefined':
+                            # parsed_hst[timestamp] = None
+                            if hst_bytes:
+                                new_timestamp, __ = struct.unpack("IB", hst_bytes[1:6])
+                            else:
+                                new_timestamp = round(time.time())
+                            times = (new_timestamp - timestamp) // 60
+                            parsed_hst[timestamp] = [0xFF for i in range(times)]
                     return parsed_hst
         return None
 
     def get_history(self, start_time, end_time, scale, wait=False) -> Union[None, list]:
-        hst = self.read_history()
-
         if wait:
             cntr = 0
             while cntr < 10:
                 time.sleep(0.1)
                 if self.history:
-                    result = self.split_state_by_type(self.history)
+                    result = self.parse_hst(self.history)
                     self.history = None
                     return result
                 cntr += 1
-        elif hst and list(hst.keys())[0] >= start_time:
+        elif (hst := self.read_history()) and list(hst.keys())[0] <= start_time:
             # парсим историю и определяем с какой временной метки в истории начинать
             keys = list(hst.keys())
-            for key in keys:
-                hst[key] = self.split_state_by_type(hst[key])
+            hst = dict(zip(keys, map(self.parse_hst2, hst.values())))
             index = 0
-            for index in range(len(keys)):
-                if keys[index] > start_time:
+            for key in keys:
+                if key < start_time:
+                    index += 1
+                else:
                     break
-            if keys[index] > start_time:
-                index -= 1
             # переводим указатель на start_time состояние и оттуда записываем историю в result
             # пока указатель не дойдет до end_time
             cntr = 0
@@ -155,14 +158,21 @@ class Item:
                 if keys[index] + cntr * 60 < start_time:
                     cntr += 1
                     continue
-                result.append(hst[keys[index]][cntr])
+
+                if cntr < len(hst[keys[index]]):
+                    result.append(hst[keys[index]][cntr])
+                # переходим к поиску в след timestamp`e
+                elif index + 1 < len(keys) and keys[index + 1] < end_time:
+                    index += 1
+                    cntr = 0
+                else:
+                    break
                 cntr += scale
             return result
         return None
 
-    # https://github.com/MimiSmart/new_api_plugin/commit/bfc1a0cd0f9c92bd8118142e51557d852903a731
-    # если нужно будет пилить парсилку для get_state - смотреть этот коммит
-    def split_state_by_type(self, states):
+    # parse old history, .hst files
+    def parse_hst(self, states):
         # switch пропускаю т.к. он стейт присылает только при нажатии и история, собираемая раз в минуту будет бесполезной
         split_states = []
         if not isinstance(states, list):
@@ -171,9 +181,12 @@ class Item:
             split_states = [{'state': item & 1} for item in states]
         elif self.type in ['dimmer-lamp', 'dimer-lamp']:
             split_states = [
-                {'on': states[index] & 1, 'brightness': round(int((states[index + 1]) * 100 / 255.0), 1)} for
-                index in
-                range(0, len(states), 2)]
+                {
+                    'on': states[index] & 1,
+                    'brightness': round(int((states[index + 1]) * 100 / 255.0), 1)
+                }
+                for index in range(0, len(states), 2)
+            ]
         elif self.type == 'rgb-lamp':
             # rgb in old history save only value (brightness)
             split_states = [
@@ -209,6 +222,68 @@ class Item:
                 else:
                     tmp['state'] = 'undefined'
                 split_states.append(tmp)
+        elif self.type in ['temperature-sensor', 'motion-sensor', 'illumination-sensor', 'humidity-sensor']:
+            split_states = [{'state': round(states[index + 1] + (states[index] / 255.0), 2)} for index in
+                            range(0, len(states), 2)]
+        elif self.type == 'leak-sensor':
+            split_states = [{'state': item} for item in states]
+        return split_states
+
+    # parse new history, .hst2 files
+    def parse_hst2(self, states):
+        # switch пропускаю т.к. он стейт присылает только при нажатии и история, собираемая раз в минуту будет бесполезной
+        split_states = []
+        if states is None: return None
+        states = [x for x in states]
+        if self.type in ['lamp', 'script', 'valve', 'door-sensor']:
+            split_states = [{'state': item & 1} for item in states]
+        elif self.type in ['dimmer-lamp', 'dimer-lamp']:
+            split_states = [
+                {
+                    'on': states[index] & 1,
+                    'brightness': round(int((states[index + 1]) * 100 / 255.0), 1)
+                }
+                for index in range(0, len(states), 2)
+            ]
+        elif self.type == 'rgb-lamp':
+            split_states = [
+                {
+                    'on': states[index] & 1,
+                    'value': round(int((states[index + 1]) * 100 / 255.0), 1),
+                    'saturation': round(int((states[index + 2]) * 100 / 255.0), 1),
+                    'hue': round(int((states[index + 3]) * 100 / 255.0), 1),
+                }
+                for index in range(0, len(states), 4)
+            ]
+        elif self.type == 'valve-heating':
+            # opt0 - видимо вкл/выкл, 0xFA на вкл
+            # opt1 - дробная установленная
+            # opt2 - целая установленная
+            # opt3 - дробная сенсора
+            # opt4 - целая сенсора
+            # opt5 - номер автоматизации
+            split_states = [
+                {
+                    'on': 1 if states[index] == 0xFA else 0,
+                    'set_temperature': round(states[index + 2] + (states[index + 1] / 255.0), 2),
+                    'sensor_temperature': round(states[index + 4] + (states[index + 3] / 255.0), 2),
+                    'num_automation': states[index + 5]
+                }
+                for index in range(0, len(states), 6)]
+        elif self.type in 'conditioner':
+            split_states = [
+                {
+                    'on': states[index] & 1,
+                    'mode': states[index] >> 4,
+                    'temperature': states[index + 1],  # нужно добавить t-min
+                    'vane-hor': states[index + 3] & 0x0F,
+                    'vane-ver': states[index + 3] >> 4,
+                    'fan': states[index + 4] & 0x0F
+                }
+                for index in range(0, len(states), 6)
+            ]
+        elif self.type in ['jalousie', 'blinds', 'gate']:
+            split_states = [{'state': item} for item in states]
         elif self.type in ['temperature-sensor', 'motion-sensor', 'illumination-sensor', 'humidity-sensor']:
             split_states = [{'state': round(states[index + 1] + (states[index] / 255.0), 2)} for index in
                             range(0, len(states), 2)]
