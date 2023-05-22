@@ -82,6 +82,9 @@ class SubscribeWebsocket:
     event_statistics: list
     event_msg: list
 
+    # при подписке на элементы сразу отправляются их текущие статусы
+    sent_init_status: bool
+
     def __init__(self, websocket: WebSocket,
                  event_logic: dict = None,
                  event_items: list = None,
@@ -104,6 +107,7 @@ class SubscribeWebsocket:
             self.event_msg = list()
         else:
             self.event_msg = event_msg
+        self.sent_init_status = False
 
 
 def subscriber(index, args):
@@ -151,7 +155,7 @@ def subscriber(index, args):
                     if args['event_logic']['items'] == 'all':
                         if args['command'] == 'subscribe':
                             # append all existed items to subscribe
-                            for item in logic.items:
+                            for item in logic.items.values():
                                 subscribes[index].event_logic['items'].append(item.addr)
                             # remove duplicates
                             subscribes[index].event_logic['items'] = \
@@ -276,6 +280,7 @@ def subscriber(index, args):
         # remove last \n
         if len(msg['event_items']):
             msg['event_items'] = msg['event_items'][:-1]
+
     if 'event_statistics' in args:
         msg['event_statistics'] = ''
         if isinstance(args['event_statistics'], str):
@@ -437,7 +442,9 @@ def listener():
                     if addr in logic.items.keys() and logic.items[addr].state is not None:
                         new_state = logic.items[addr].state
                         # if new state not equal old state, then send event
-                        if addr not in old_states or old_states[addr] != new_state:
+                        if not subscribes[index].sent_init_status or addr not in old_states or old_states[
+                            addr] != new_state:
+                            subscribes[index].sent_init_status = True
                             msg[addr] = new_state.hex(' ')
                 # упаковываем все однотипные ивенты в 1 пакет
                 if msg:
@@ -481,6 +488,7 @@ def listener():
 
 commands = {
     "get_items": get_items,
+    "get_item": get_item,
     "set_item": set_item,
     "del_item": del_item,
     "get_state": get_state,

@@ -5,8 +5,6 @@ from collections import defaultdict
 from typing import Dict
 from xml.etree import cElementTree as ET
 
-from crc import Calculator, Crc16
-
 from item import Item
 
 
@@ -36,7 +34,6 @@ class Logic:
     # если False, то работает функция logic.update
     # если True, то функция logic.update не работает, работает рассылка подписки через ws
     update_flag = False
-    calculator = Calculator(Crc16.CCITT, optimized=True)
 
     def __init__(self, path_logic):
         self.path_logic = path_logic
@@ -57,6 +54,7 @@ class Logic:
         return self.xml_logic.replace(b'#amp', b'&')
 
     def get_dict(self):
+        if not self.xml_logic: self.read_logic()
         e = ET.XML(self.xml_logic.decode())
         # self.obj_logic = self._xml2dict(e)
         return self._xml2dict(e)
@@ -318,7 +316,6 @@ class Logic:
             buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 file ' + self.path_logic, shell=True,
                                     capture_output=True)
         else:
-            self.calculator.checksum(data.encode('utf-8'))
             buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 string \'' + data + '\'', shell=True,
                                     capture_output=True)
         crc = buffer.stdout.decode('utf-8')
