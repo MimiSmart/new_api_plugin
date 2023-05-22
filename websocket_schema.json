@@ -95,6 +95,82 @@
         }
       }
     },
+    "set_state": {
+      "post": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Set state on item",
+        "operationId": "set_state",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsSetState"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "get_all_states": {
+      "get": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Get current state of all items",
+        "operationId": "get_all_states",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsGetAllStates"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "get_history": {
+      "get": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Get statistics of item",
+        "operationId": "get_history",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsGetHistory"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "send_message": {
+      "post": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Send push-message to server",
+        "operationId": "send_message",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsSendMessage"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
     "subscribe": {
       "post": {
         "tags": [
@@ -110,7 +186,7 @@
               },
               "examples": {
                 "list_items": {
-                  "summary": "List of items",
+                  "summary": "'event_items': List of items",
                   "description": "Example subscribe on a state of list of items",
                   "value": {
                     "command": "subscribe",
@@ -121,7 +197,7 @@
                   }
                 },
                 "one_item": {
-                  "summary": "One item",
+                  "summary": "'event_items': One item",
                   "description": "Example subscribe on a state of item",
                   "value": {
                     "command": "subscribe",
@@ -129,7 +205,7 @@
                   }
                 },
                 "all_items": {
-                  "summary": "All items",
+                  "summary": "'event_items': All items",
                   "description": "Example subscribe on a state of all items. If the client subscribed to the state of all items, and then a new item was added to the logic, the client will not receive the state of this new element.",
                   "value": {
                     "command": "subscribe",
@@ -137,7 +213,7 @@
                   }
                 },
                 "all_updates": {
-                  "summary": "All logic updates",
+                  "summary": "'event_logic': All logic updates",
                   "description": "Example subscribe on all updates logic and items.",
                   "value": {
                     "command": "subscribe",
@@ -145,7 +221,7 @@
                   }
                 },
                 "list_items_updates": {
-                  "summary": "List items updates",
+                  "summary": "'event_logic': List items updates",
                   "description": "Example subscribe on updates list of items.",
                   "value": {
                     "command": "subscribe",
@@ -158,7 +234,7 @@
                   }
                 },
                 "one_item_update": {
-                  "summary": "One item updates",
+                  "summary": "'event_logic': One item updates",
                   "description": "Example subscribe on updates one item.",
                   "value": {
                     "command": "subscribe",
@@ -168,25 +244,93 @@
                   }
                 },
                 "items_and_logic_updates": {
-                  "summary": "List of items and logic updates",
+                  "summary": "'event_logic': List of items and logic updates",
                   "description": "Example subscribe on updates logic and list of items.",
                   "value": {
                     "command": "subscribe",
                     "event_logic": {
                       "logic": true,
-                      "items": ["999:99"]
+                      "items": [
+                        "999:99"
+                      ]
                     }
                   }
                 },
                 "logic_updates_in_xml": {
-                  "summary": "Logic updates in xml format",
+                  "summary": "'event_logic': Logic updates in xml format",
                   "description": "Example subscribe on updates logic in xml format.",
                   "value": {
                     "command": "subscribe",
                     "event_logic": {
                       "logic": true,
-                      "response_type":"xml"
+                      "response_type": "xml"
                     }
+                  }
+                },
+                "list_items_history": {
+                  "summary": "'event_statistics': List of items",
+                  "description": "Example subscribe on a statistics of list of items",
+                  "value": {
+                    "command": "subscribe",
+                    "event_statistics": [
+                      "999:99",
+                      "999:98"
+                    ]
+                  }
+                },
+                "one_item_history": {
+                  "summary": "'event_statistics': One item",
+                  "description": "Example subscribe on a statistics of item",
+                  "value": {
+                    "command": "subscribe",
+                    "event_statistics": "999:99"
+                  }
+                },
+                "all_items_history": {
+                  "summary": "'event_statistics': All items",
+                  "description": "Example subscribe on a statistics of all items.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_statistics": "all"
+                  }
+                },
+                "list_push_types": {
+                  "summary": "'event_msg': List of types of push-messages",
+                  "description": "Example subscribe on a list of types of push-messages",
+                  "value": {
+                    "command": "subscribe",
+                    "event_msg": [
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                },
+                "one_push_type": {
+                  "summary": "'event_msg': One type of push-message",
+                  "description": "Example subscribe on a one type of push-message",
+                  "value": {
+                    "command": "subscribe",
+                    "event_msg": 1
+                  }
+                },
+                "all_push_types": {
+                  "summary": "'event_msg': All types of push-messages",
+                  "description": "Example subscribe on all types of push-messages.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_msg": "all"
+                  }
+                },
+                "subscribe_all": {
+                  "summary": "Subscribe all",
+                  "description": "You can use any of these keys with their full functionality in one request.",
+                  "value": {
+                    "command": "subscribe",
+                    "event_items": "all",
+                    "event_logic": "all",
+                    "event_statistics": "all",
+                    "event_msg": "all"
                   }
                 }
               }
@@ -211,7 +355,7 @@
               },
               "examples": {
                 "list_items": {
-                  "summary": "List of items",
+                  "summary": "'event_items': List of items",
                   "description": "Example unsubscribe on a state of list of items",
                   "value": {
                     "command": "unsubscribe",
@@ -222,7 +366,7 @@
                   }
                 },
                 "one_item": {
-                  "summary": "One item",
+                  "summary": "'event_items': One item",
                   "description": "Example unsubscribe on a state of item",
                   "value": {
                     "command": "unsubscribe",
@@ -230,23 +374,23 @@
                   }
                 },
                 "all_items": {
-                  "summary": "All items",
-                  "description": "Example unsubscribe on a state of all items",
+                  "summary": "'event_items': All items",
+                  "description": "Example unsubscribe on a state of all items.",
                   "value": {
                     "command": "unsubscribe",
                     "event_items": "all"
                   }
                 },
                 "all_updates": {
-                  "summary": "All logic updates",
-                  "description": "Example subscribe on all updates logic and items.",
+                  "summary": "'event_logic': All logic updates",
+                  "description": "Example unsubscribe on all updates logic and items.",
                   "value": {
-                    "command": "subscribe",
+                    "command": "unsubscribe",
                     "event_logic": "all"
                   }
                 },
                 "list_items_updates": {
-                  "summary": "List items updates",
+                  "summary": "'event_logic': List items updates",
                   "description": "Example unsubscribe on updates list of items.",
                   "value": {
                     "command": "unsubscribe",
@@ -259,7 +403,7 @@
                   }
                 },
                 "one_item_update": {
-                  "summary": "One item updates",
+                  "summary": "'event_logic': One item updates",
                   "description": "Example unsubscribe on updates one item.",
                   "value": {
                     "command": "unsubscribe",
@@ -269,25 +413,93 @@
                   }
                 },
                 "items_and_logic_updates": {
-                  "summary": "List of items and logic updates",
+                  "summary": "'event_logic': List of items and logic updates",
                   "description": "Example unsubscribe on updates logic and list of items.",
                   "value": {
                     "command": "unsubscribe",
                     "event_logic": {
                       "logic": true,
-                      "items": ["999:99"]
+                      "items": [
+                        "999:99"
+                      ]
                     }
                   }
                 },
                 "logic_updates_in_xml": {
-                  "summary": "Logic updates in xml format",
+                  "summary": "'event_logic': Logic updates in xml format",
                   "description": "Example unsubscribe on updates logic in xml format.",
                   "value": {
                     "command": "unsubscribe",
                     "event_logic": {
                       "logic": true,
-                      "response_type":"xml"
+                      "response_type": "xml"
                     }
+                  }
+                },
+                "list_items_history": {
+                  "summary": "'event_statistics': List of items",
+                  "description": "Example unsubscribe on a statistics of list of items",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_statistics": [
+                      "999:99",
+                      "999:98"
+                    ]
+                  }
+                },
+                "one_item_history": {
+                  "summary": "'event_statistics': One item",
+                  "description": "Example unsubscribe on a statistics of item",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_statistics": "999:99"
+                  }
+                },
+                "all_items_history": {
+                  "summary": "'event_statistics': All items",
+                  "description": "Example unsubscribe on a statistics of all items.",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_statistics": "all"
+                  }
+                },
+                "list_push_types": {
+                  "summary": "'event_msg': List of types of push-messages",
+                  "description": "Example unsubscribe on a list of types of push-messages",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_msg": [
+                      1,
+                      2,
+                      3
+                    ]
+                  }
+                },
+                "one_push_type": {
+                  "summary": "'event_msg': One type of push-message",
+                  "description": "Example unsubscribe on a one type of push-message",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_msg": 1
+                  }
+                },
+                "all_push_types": {
+                  "summary": "'event_msg': All types of push-messages",
+                  "description": "Example unsubscribe on all types of push-messages.",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_msg": "all"
+                  }
+                },
+                "unsubscribe_all": {
+                  "summary": "Unsubscribe all",
+                  "description": "You can use any of these keys with their full functionality in one request",
+                  "value": {
+                    "command": "unsubscribe",
+                    "event_items": "all",
+                    "event_logic": "all",
+                    "event_statistics": "all",
+                    "event_msg": "all"
                   }
                 }
               }
@@ -395,6 +607,101 @@
         },
         "addr": {
           "title": "Address of item or list addressess",
+          "type": "string"
+        }
+      }
+    },
+    "WsSetState": {
+      "title": "Websocket set state on item",
+      "required": [
+        "command",
+        "addr",
+        "state"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "addr": {
+          "title": "Address of item",
+          "type": "string"
+        },
+        "state": {
+          "title": "String of bytes state",
+          "type": "string"
+        }
+      }
+    },
+    "WsGetAllStates": {
+      "title": "Websocket get state of all items",
+      "required": [
+        "command"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        }
+      }
+    },
+    "WsGetHistory": {
+      "title": "Websocket get statistics of item",
+      "required": [
+        "command",
+        "addr",
+        "range_time",
+        "scale"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "addr": {
+          "title": "Address of item",
+          "type": "string"
+        },
+        "range_time": {
+          "title": "List of timestamps, start-end time",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "scale": {
+          "title": "Period in minutes between values",
+          "type": "integer"
+        }
+      }
+    },
+    "WsSendMessage": {
+      "title": "Websocket send push-message to server",
+      "required": [
+        "command",
+        "addr",
+        "message_type",
+        "message"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "addr": {
+          "title": "Address of item",
+          "type": "string"
+        },
+        "message_type": {
+          "title": "Type of push-message",
+          "type": "integer"
+        },
+        "message": {
+          "title": "Message text",
           "type": "string"
         }
       }

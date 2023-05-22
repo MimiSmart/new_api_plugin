@@ -4,20 +4,20 @@ from pydantic import BaseModel, Field
 
 
 class SetState(BaseModel):
-    addr: str
-    state: str
+    addr: str = Field(title="Address of item")
+    state: str = Field(title="Setter state")
 
 
 class DelItem(BaseModel):
-    addr: str
+    addr: str = Field(title="Address of item")
 
 
 class SetLogic(BaseModel):
-    xml: str
+    xml: str = Field(title="Xml data to be loaded into logic.xml")
 
 
 class GetState(BaseModel):
-    addr: Union[str, list[str]]
+    addr: Union[str, list[str]] = Field(title="Address of item or list of addresses of items")
 
 
 class SetItem(BaseModel):
@@ -28,12 +28,12 @@ class SetItem(BaseModel):
 
 
 class GetHistory(BaseModel):
-    addr: str
-    range_time: list
-    scale: int
+    addr: str = Field(title="Address of item")
+    range_time: list[int] = Field(title="List of timestamps, start-end time")
+    scale: int = Field(title="Period in minutes between values")
 
 
 class SendMessage(BaseModel):
-    addr: str
-    message_type: int
-    message: str
+    addr: str = Field(title="Address of device, which push-message will be sent")
+    message_type: int = Field(title="Type of push-message")
+    message: str = Field(title="Message text")
