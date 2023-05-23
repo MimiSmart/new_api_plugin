@@ -50,6 +50,51 @@
             "json": {
               "schema": {
                 "$ref": "#/components/schemas/WsSetItem"
+              },
+              "examples": {
+                "write_item": {
+                  "summary": "Write item with new attributes",
+                  "description": "Example write item with new attributes",
+                  "value": {
+                    "command": "set_item",
+                    "type": "write",
+                    "tag": "item",
+                    "area": "System",
+                    "data": {
+                      "addr": "999:99",
+                      "type": "lamp",
+                      "name": "example lamp"
+                    }
+                  }
+                },
+                "append_item": {
+                  "summary": "Append attributes to item",
+                  "description": "Example append attributes to item",
+                  "value": {
+                    "command": "set_item",
+                    "type": "append",
+                    "tag": "item",
+                    "area": "System",
+                    "data": {
+                      "addr": "999:99",
+                      "some_added_key": "some_added_value"
+                    }
+                  }
+                },
+                "remove_item": {
+                  "summary": "Remove attributes from item",
+                  "description": "Example remove attributes from item",
+                  "value": {
+                    "command": "set_item",
+                    "type": "remove",
+                    "tag": "item",
+                    "area": "System",
+                    "data": {
+                      "addr": "999:99",
+                      "some_removed_key": "any_value"
+                    }
+                  }
+                }
               }
             }
           },
@@ -69,6 +114,16 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WsDelItem"
+              },
+              "examples": {
+                "delete_item": {
+                  "summary": "Delete item from logic",
+                  "description": "Example delete item from logic",
+                  "value": {
+                    "command": "del_item",
+                    "addr": "999:99"
+                  }
+                }
               }
             }
           },
@@ -87,7 +142,28 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WsGetState"
+                "$ref": "#/components/schemas/WsGetState",
+                "examples": {
+                  "get_state_of_one_item": {
+                    "summary": "Get current state of one item",
+                    "description": "Example get current state of one item",
+                    "value": {
+                      "command": "get_state",
+                      "addr": "999:99"
+                    }
+                  },
+                  "get_state_of_list_items": {
+                    "summary": "Get current state of list of items",
+                    "description": "Example get current state of list of items",
+                    "value": {
+                      "command": "get_state",
+                      "addr": [
+                        "999:99",
+                        "999:98"
+                      ]
+                    }
+                  }
+                }
               }
             }
           },
@@ -107,6 +183,17 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WsSetState"
+              },
+              "examples": {
+                "set_state": {
+                  "summary": "Set state on item",
+                  "description": "Example set state on item",
+                  "value": {
+                    "command": "set_state",
+                    "addr": "999:99",
+                    "state": "01"
+                  }
+                }
               }
             }
           },
@@ -145,6 +232,21 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WsGetHistory"
+              },
+              "examples": {
+                "get_history": {
+                  "summary": "Get history of item",
+                  "description": "Example get gistory of item",
+                  "value": {
+                    "command": "get_history",
+                    "addr": "999:99",
+                    "range_time": [
+                      1684746076,
+                      1684832476
+                    ],
+                    "scale": 1
+                  }
+                }
               }
             }
           },
@@ -164,6 +266,18 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/WsSendMessage"
+              },
+              "examples": {
+                "send_message": {
+                  "summary": "Send push-message",
+                  "description": "Example send push-message",
+                  "value": {
+                    "command": "send_message",
+                    "addr": "2047:32",
+                    "message_type": 1,
+                    "message": "Text message"
+                  }
+                }
               }
             }
           },
