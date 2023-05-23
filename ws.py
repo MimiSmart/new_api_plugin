@@ -138,13 +138,10 @@ def subscriber(index, args):
                 # unsubscribe
                 else:
                     for response_type in args['event_logic']['response_type']:
-                        if response_type not in subscribes[index].event_logic['response_type']:
+                        if response_type in subscribes[index].event_logic['response_type']:
                             subscribes[index].event_logic['response_type'].remove(response_type)
                     if not len(subscribes[index].event_logic['response_type']):
                         subscribes[index].event_logic['response_type'].append('json')
-                        msg['event_logic'] += "Incorrect unsubscribe logic response type. The response \
-                            type can`t be empty, json format will be used by default. If you want to \
-                            unsubscribe from logic updates - use 'logic:false'\n"
 
             # by default logic response type is json
             elif args['command'] == 'subscribe' and 'json' not in subscribes[index].event_logic['response_type']:

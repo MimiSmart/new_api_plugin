@@ -18,6 +18,8 @@ threads = list()
 home_path = '/home/sh2/exe/new_api_plugin/'  # RELEASE
 
 
+# home_path = './'
+
 def server_run(host, port):
     rest.app.add_api_websocket_route('/', ws.endpoint)
 
@@ -29,7 +31,6 @@ def server_run(host, port):
             openapi['paths'][key] = value
         for key, value in tmp['schemas'].items():
             openapi['components']['schemas'][key] = value
-
     uvicorn.run(rest.app, host=host, port=port)
 
 
@@ -39,6 +40,7 @@ with open(home_path + 'config') as f:
 
 # ---------read logic--------------
 logic = Logic(config['logic_path'])
+
 rest.init_logic(logic)
 ws.init_logic(logic)
 # --------run listener states------
@@ -72,7 +74,7 @@ def history_writer():
         time.sleep(60)
         for item in logic.items.values():
             if item.type != 'switch' and item.state:
-                logic.history_events[item.addr] = item.state  # дописать парсилку
+                logic.history_events[item.addr] = item.state
                 item.write_history()
 
 
