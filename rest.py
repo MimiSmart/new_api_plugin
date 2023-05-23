@@ -96,7 +96,6 @@ def get_history(args: GetHistory):
         }
         hst = logic.items[args.addr].get_history(*args.range_time, args.scale, wait=True)
         return {"type": "response", "addr": args.addr, "history": hst}
-    return {"type": "error", "message": "No history, return by timeout"}
 
 
 @app.post("/item/send_message/", tags=['rest api'], summary="Send push message")
