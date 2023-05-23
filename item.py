@@ -78,8 +78,10 @@ class Item:
                     key = key[-1]
                     with open('/home/sh2/exe/new_api_plugin/history/' + filename, 'ab') as f:
                         # if item wasn`t undefined and cur state is not undefined
-                        if hst[key] is not None and self.state[0] != 0xFF:
+                        if b'undefined' not in hst[key] and self.state[0] != 0xFF:
                             f.write(self.state)
+                        #if item was undefined and cur state is undefined - skip
+                        elif b'undefined' in hst[key] and self.state[0] == 0xFF: pass
                         else:
                             f.write(0xFF.to_bytes(1, 'little'))
                             f.write(round(time.time()).to_bytes(4, 'little', signed=False))
@@ -298,6 +300,7 @@ class Item:
         elif self.type in ['temperature-sensor', 'motion-sensor', 'illumination-sensor', 'humidity-sensor']:
             split_states = [{'state': round(states[index + 1] + (states[index] / 255.0), 2)} for index in
                             range(0, len(states), 2)]
+            pass
         elif self.type == 'leak-sensor':
             split_states = [{'state': item} for item in states]
         return split_states
