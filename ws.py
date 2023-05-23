@@ -165,7 +165,7 @@ def subscriber(index, args):
                         else:
                             for x in range(len(subscribes[index].event_logic['items'])):
                                 subscribes[index].event_logic['items'].pop()
-                            msg['event_items'] += "Unsubscribe all items success\n"
+                            msg['event_logic'] += "Unsubscribe all items success\n"
                     # if 'items' is string addr item, then make list with this one item
                     else:
                         args['event_logic']['items'] = [args['event_logic']['items']]
@@ -223,7 +223,6 @@ def subscriber(index, args):
                     index = subscribes[index].event_msg.index(msg)
                     subscribes[index].event_msg.pop(index)
             msg['event_msg'] = 'Unsubscribe success'
-
     if 'event_items' in args:
         msg['event_items'] = ''
         # if event_items is string addr of item, then make list with this one addr
@@ -280,7 +279,6 @@ def subscriber(index, args):
         # remove last \n
         if len(msg['event_items']):
             msg['event_items'] = msg['event_items'][:-1]
-
     if 'event_statistics' in args:
         msg['event_statistics'] = ''
         if isinstance(args['event_statistics'], str):
@@ -331,6 +329,11 @@ def subscriber(index, args):
                 else:
                     msg['event_statistics'] += "Unsubscribe success\n"
         # subscribes[index].event_statistics = args['event_statistics']
+
+        # remove last \n
+        if len(msg['event_statistics']):
+            msg['event_statistics'] = msg['event_statistics'][:-1]
+
     return msg
 
 
