@@ -168,12 +168,7 @@ class SHClient:
                 try:
                     tmp = push
                     self.logic.push_requests.pop(0)
-                    self.sendMessage(
-                        tmp['message'],
-                        tmp['message_type'],
-                        tmp['id'],
-                        tmp['subid']
-                    )
+                    self.sendMessage(tmp['message'],tmp['message_type'],tmp['id'],tmp['subid'])
                 except:
                     print(''.join(
                         ["Error send message on ", str(push['id']), ':', str(push['subid']), ', with type message = ',
@@ -349,8 +344,13 @@ class SHClient:
 
     def sendMessage(self, message, message_type=1, id=2047, subid=32):
         if not self.runSuccess: return False
+        message = message.encode('utf-8')
         length = 1 + len(message)
-        data = self.packData(id, subid, 5, length, [ord(char) for char in chr(message_type) + message])
+
+        data = struct.pack("2H4BH", self.initClientID, id, 5, 0, 0, subid, length)
+        data += message_type.to_bytes(1,'little')
+        data += message
+
         if not self.connectionResource.send(data):
             print(''.join(
                 ["Error send message on ", str(id), ':', str(subid), ', with type message = ', str(message_type),
