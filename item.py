@@ -78,10 +78,11 @@ class Item:
                     key = key[-1]
                     with open('/home/sh2/exe/new_api_plugin/history/' + filename, 'ab') as f:
                         # if item wasn`t undefined and cur state is not undefined
-                        if b'undefined' not in hst[key] and self.state[0] != 0xFF:
+                        if hst[key][0] != 0xFF and self.state[0] != 0xFF:
                             f.write(self.state)
-                        #if item was undefined and cur state is undefined - skip
-                        elif b'undefined' in hst[key] and self.state[0] == 0xFF: pass
+                        # if item was undefined and cur state is undefined - skip
+                        elif hst[key][0] == 0xFF and self.state[0] == 0xFF:
+                            pass
                         else:
                             f.write(0xFF.to_bytes(1, 'little'))
                             f.write(round(time.time()).to_bytes(4, 'little', signed=False))
@@ -158,11 +159,6 @@ class Item:
             keys = list(hst.keys())
             hst = dict(zip(keys, map(self.parse_hst2, hst.values())))
             index = 0
-            for key in keys:
-                if key < start_time:
-                    index += 1
-                else:
-                    break
             # переводим указатель на start_time состояние и оттуда записываем историю в result
             # пока указатель не дойдет до end_time
             cntr = 0
@@ -174,13 +170,13 @@ class Item:
 
                 if cntr < len(hst[keys[index]]):
                     result.append(hst[keys[index]][cntr])
+                    cntr += scale
                 # переходим к поиску в след timestamp`e
                 elif index + 1 < len(keys) and keys[index + 1] < end_time:
                     index += 1
                     cntr = 0
                 else:
                     break
-                cntr += scale
             return result
         return None
 
@@ -248,6 +244,12 @@ class Item:
         split_states = []
         if states is None: return None
         states = [x for x in states]
+
+        # undefined
+        if states[0] == 0xFF:
+            split_states = [{'state': 'undefined'} for item in states]
+            return split_states
+
         if self.type in ['lamp', 'script', 'valve', 'door-sensor']:
             split_states = [{'state': item & 1} for item in states]
         elif self.type in ['dimmer-lamp', 'dimer-lamp']:
