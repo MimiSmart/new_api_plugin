@@ -35,6 +35,9 @@ class Logic:
     # если True, то функция logic.update не работает, работает рассылка подписки через ws
     update_flag = False
 
+    # обеспечивает запись и чтение logic.xml по очереди
+    write_flag = False
+
     def __init__(self, path_logic):
         self.path_logic = path_logic
         self.read_logic()
@@ -45,10 +48,11 @@ class Logic:
             self.items[item['addr']] = Item(addr=item['addr'], crc=crc, update=False, json_obj=item)
 
     def read_logic(self):
-        with open(self.path_logic, 'rb') as f:
-            self._header = f.readline()
-            self.xml_logic = f.read()
-            self.xml_logic = self.xml_logic.replace(b'&', b'#amp')
+        if not self.write_flag:
+            with open(self.path_logic, 'rb') as f:
+                self._header = f.readline()
+                self.xml_logic = f.read()
+                self.xml_logic = self.xml_logic.replace(b'&', b'#amp')
 
     def get_xml(self):
         return self.xml_logic.replace(b'#amp', b'&')
@@ -153,6 +157,7 @@ class Logic:
         return {'type': 'response', 'message': 'Delete item successfully'}
 
     def write(self):
+        self.write_flag = True
         with open(self.path_logic, 'wb') as f:
             xml_logic = self._dict2xml(self.obj_logic)
             # костыль что бы вернуть <?xml version="1.0" encoding="UTF-8"?> в исходном виде
@@ -163,6 +168,7 @@ class Logic:
             f.write(self._header)
             for line in xml_logic.split("\n")[1:]:
                 f.write((line + "\n").encode('utf-8'))
+        self.write_flag = False
 
     def set_xml(self, xml):
         xml = xml.encode('utf-8')
