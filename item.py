@@ -271,18 +271,18 @@ class Item:
                 for index in range(0, len(states), 4)
             ]
         elif self.type == 'valve-heating':
-            # opt0 - видимо вкл/выкл, 0xFA на вкл
+            # opt0 - старшие 4 бита - номер автоматизации, младшие - вкл/выкл
             # opt1 - дробная установленная
             # opt2 - целая установленная
             # opt3 - дробная сенсора
             # opt4 - целая сенсора
-            # opt5 - номер автоматизации
+            # opt5 - 0xFF, 0xFA или 0
             split_states = [
                 {
-                    'on': 1 if states[index] == 0xFA else 0,
+                    'on': states[index] & 1,
                     'set_temperature': round(states[index + 2] + (states[index + 1] / 255.0), 2),
                     'sensor_temperature': round(states[index + 4] + (states[index + 3] / 255.0), 2),
-                    'num_automation': states[index + 5]
+                    'num_automation': states[index] >> 4 if not states[index + 5] else states[index + 5]
                 }
                 for index in range(0, len(states), 6)]
         elif self.type in 'conditioner':
