@@ -400,8 +400,14 @@ def listener():
                     if 'responsed' in item and logic.items[key].history:
                         hst = logic.items[key].get_history(*item['range_time'], item['scale'], wait=True)
                         response = {'type': 'response', 'history': hst, 'addr': key}
-                        asyncio.run(ws_send_message(item['client'],
-                                                    json.dumps(response, ensure_ascii=False)))  # if client connected
+                        if item['client'].application_state.value == 1:
+                            asyncio.run(ws_send_message(item['client'],
+                                                        json.dumps(response,
+                                                                   ensure_ascii=False)))  # if client connected
+                        else:
+                            print('Websocket state is not connected. Close connection')
+                            subscribes.pop(find_index(websocket))
+                            break
                         logic.history_requests.pop(key)
             if subscribes[index].event_msg:
                 pushes = list()
@@ -412,20 +418,35 @@ def listener():
                 if pushes:
                     response = {'type': 'subscribe-event', 'event_type': "push_message",
                                 'data': pushes}
-                    asyncio.run(
-                        ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                    if subscribes[index].websocket.application_state.value == 1:
+                        asyncio.run(ws_send_message(subscribes[index].websocket,
+                                                    json.dumps(response, ensure_ascii=False)))
+                    else:
+                        print('Websocket state is not connected. Close connection')
+                        subscribes.pop(index)
+                        break
             if subscribes[index].event_logic['logic'] and logic.update_flag:
                 if logic.logic_update:
                     if 'json' in subscribes[index].event_logic['response_type']:
                         msg = logic.get_dict()
                         response = {'type': 'subscribe-event', 'event_type': "logic_json_update", 'data': msg}
-                        asyncio.run(
-                            ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                        if subscribes[index].websocket.application_state.value == 1:
+                            asyncio.run(ws_send_message(subscribes[index].websocket,
+                                                        json.dumps(response, ensure_ascii=False)))
+                        else:
+                            print('Websocket state is not connected. Close connection')
+                            subscribes.pop(index)
+                            break
                     if 'xml' in subscribes[index].event_logic['response_type']:
                         msg = logic.get_xml().decode('utf-8')
                         response = {'type': 'subscribe-event', 'event_type': "logic_xml_update", 'data': msg}
-                        asyncio.run(
-                            ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                        if subscribes[index].websocket.application_state.value == 1:
+                            asyncio.run(ws_send_message(subscribes[index].websocket,
+                                                        json.dumps(response, ensure_ascii=False)))
+                        else:
+                            print('Websocket state is not connected. Close connection')
+                            subscribes.pop(index)
+                            break
             if subscribes[index].event_logic['items'] and logic.update_flag:
                 msg = dict()
                 for addr in subscribes[index].event_logic['items']:
@@ -435,22 +456,34 @@ def listener():
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "logic_item_update",
                                 'data': msg}
-                    asyncio.run(ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                    if subscribes[index].websocket.application_state.value == 1:
+                        asyncio.run(
+                            ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                    else:
+                        print('Websocket state is not connected. Close connection')
+                        subscribes.pop(index)
+                        break
             if subscribes[index].event_items:
                 msg = dict()
                 for addr in subscribes[index].event_items:
                     if addr in logic.items.keys() and logic.items[addr].state is not None:
                         new_state = logic.items[addr].state
                         # if new state not equal old state, then send event
-                        if not subscribes[index].sent_init_status or addr not in old_states or old_states[
-                            addr] != new_state:
+                        if not subscribes[index].sent_init_status or addr not in old_states \
+                                or old_states[addr] != new_state:
                             subscribes[index].sent_init_status = True
                             msg[addr] = new_state.hex(' ')
                 # упаковываем все однотипные ивенты в 1 пакет
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "state_item",
                                 'data': msg}
-                    asyncio.run(ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                    if subscribes[index].websocket.application_state.value == 1:
+                        asyncio.run(ws_send_message(subscribes[index].websocket,
+                                                    json.dumps(response, ensure_ascii=False)))
+                    else:
+                        print('Websocket state is not connected. Close connection')
+                        subscribes.pop(index)
+                        break
             if subscribes[index].event_statistics:
                 if logic.history_events:
                     msg = dict()
@@ -460,8 +493,9 @@ def listener():
                     # упаковываем все однотипные ивенты в 1 пакет
                     if msg:
                         response = {'type': 'subscribe-event', 'event_type': "statistics", 'data': msg}
-                        asyncio.run(
-                            ws_send_message(subscribes[index].websocket, json.dumps(response, ensure_ascii=False)))
+                        if subscribes[index].websocket.application_state.value == 1:
+                            asyncio.run(ws_send_message(subscribes[index].websocket,
+                                                        json.dumps(response, ensure_ascii=False)))
 
         # avoid exception: 'dictionary changed size during iteration'
         tmp_items = logic.items.copy()
