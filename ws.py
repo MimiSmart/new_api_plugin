@@ -43,7 +43,7 @@ def get_all_states(args):
 
 
 def set_state(args):
-    args['state'] = [int(args['state'][i:i + 2]) for i in
+    args['state'] = [int(args['state'][i:i + 2], 16) for i in
                      range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
     logic.set_queue.append((args['addr'], args['state']))
 
