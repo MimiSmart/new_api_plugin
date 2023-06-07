@@ -73,7 +73,14 @@ def del_item(addr: str):
 @app.post("/item/get_state/", tags=['rest api'], response_description='Return string of bytes state',
           summary="Get current state of item")
 def get_state(item: GetState):
-    return convert2response(logic.get_state(item.addr))
+    args = item.addr
+    if isinstance(args, str):
+        args = [args]
+
+    response = dict()
+    for addr in args:
+        response[addr] = logic.items[addr].get_state()
+    return convert2response({'type': 'response', 'data': response})
 
 
 @app.get("/item/get_all_states/", tags=['rest api'], response_description='Return string of bytes state',
@@ -84,9 +91,15 @@ def get_all_states():
 
 @app.post("/item/set_state/", tags=['rest api'], summary="Set state on item")
 def set_state(item: SetState):
-    item.state = [int(item.state[i:i + 2]) for i in range(0, len(item.state), 2)]  # разбиваем по байтам (2 символа)
-    logic.set_queue.append((item.addr, item.state))
-    # return convert2response()
+    try:
+        tmp = [int(item.state[i:i + 2], 16) for i in
+               range(0, len(item.state), 2)]  # разбиваем по байтам (2 символа)
+        logic.set_queue.append((item.addr, tmp))
+        logic.items[item.addr].set_state(bytes(tmp))
+        state = logic.items[item.addr].get_state()
+        return convert2response({"type": "response", "data": {item.addr: state}})
+    except:
+        return convert2response({"type": "error", "message": "Invalid data"})
 
 
 @app.post("/item/get_history/", tags=['rest api'], summary="Set state on item")

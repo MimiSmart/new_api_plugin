@@ -36,7 +36,14 @@ def del_item(args):
 
 
 def get_state(args):
-    return logic.get_state(*args.values())
+    args = args['addr']
+    if isinstance(args, str):
+        args = [args]
+
+    response = dict()
+    for addr in args:
+        response[addr] = logic.items[addr].get_state()
+    return {'type': 'response', 'data': response}
 
 
 def get_all_states(args):
@@ -48,7 +55,9 @@ def set_state(args):
         tmp = [int(args['state'][i:i + 2], 16) for i in
                range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
         logic.set_queue.append((args['addr'], tmp))
-        return {"type": "response", "data": {args['addr']: args['state']}}
+        logic.items[args['addr']].set_state(bytes(tmp))
+        state = logic.items[args['addr']].get_state()
+        return {"type": "response", "data": {args['addr']: state}}
     except:
         return {"type": "error", "message": "Invalid data"}
 
