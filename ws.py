@@ -115,7 +115,7 @@ def subscriber(index, args):
     msg = {'type': 'response'}
 
     if 'event_logic' in args:
-        msg['event_logic'] = ''
+        msg['event_logic'] = {'message': ''}
         # if event_logic is 'all', then make dict with subscribe all
         if isinstance(args['event_logic'], str):
             args['event_logic'] = {'logic': True, 'response_type': ['json', 'xml'], 'items': 'all'}
@@ -123,11 +123,13 @@ def subscriber(index, args):
             if 'logic' in args['event_logic'] and args['event_logic']['logic']:
                 if args['command'] == 'subscribe':
                     subscribes[index].event_logic['logic'] = True
-                    msg['event_logic'] += "Subscribe logic success\n"
+                    # отправляю логику в xml сразу при подписке
+                    msg['event_logic']['xml'] = logic.get_xml().decode('utf-8')
+                    msg['event_logic']['message'] += "Subscribe logic success\n"
                 # unsubscribe
                 else:
                     subscribes[index].event_logic['logic'] = False
-                    msg['event_logic'] += "Unsubscribe logic success\n"
+                    msg['event_logic']['message'] += "Unsubscribe logic success\n"
             if 'response_type' in args['event_logic']:
                 if isinstance(args['event_logic']['response_type'], str):
                     args['event_logic']['response_type'] = [args['event_logic']['response_type']]
@@ -135,6 +137,9 @@ def subscriber(index, args):
                     for response_type in args['event_logic']['response_type']:
                         if response_type not in subscribes[index].event_logic['response_type']:
                             subscribes[index].event_logic['response_type'].append(response_type)
+                    # отправляю логику в json сразу при подписке
+                    if 'json' in subscribes[index].event_logic['response_type']:
+                        msg['event_logic']['json'] = logic.get_dict()
                 # unsubscribe
                 else:
                     for response_type in args['event_logic']['response_type']:
@@ -157,12 +162,12 @@ def subscriber(index, args):
                             # remove duplicates
                             subscribes[index].event_logic['items'] = \
                                 list(set(subscribes[index].event_logic['items']))
-                            msg['event_logic'] += "Subscribe all items success\n"
+                            # msg['event_logic'] += "Subscribe all items success\n"
                         # unsubscribe
                         else:
                             for x in range(len(subscribes[index].event_logic['items'])):
                                 subscribes[index].event_logic['items'].pop()
-                            msg['event_logic'] += "Unsubscribe all items success\n"
+                            msg['event_logic']['message'] += "Unsubscribe all items success\n"
                     # if 'items' is string addr item, then make list with this one item
                     else:
                         args['event_logic']['items'] = [args['event_logic']['items']]
@@ -177,9 +182,9 @@ def subscriber(index, args):
                                 subscribes[index].event_logic['items'].append(item)
                             else:
                                 flag = True
-                                msg['event_logic'] += "Item %s not found in logic\n" % (str(item))
+                                msg['event_logic']['message'] += "Item %s not found in logic\n" % (str(item))
                         if not flag:
-                            msg['event_logic'] += "Subscribe items success\n"
+                            msg['event_logic']['message'] += "Subscribe items success\n"
                     # unsubscribe
                     else:
                         not_found_items = []
@@ -190,12 +195,13 @@ def subscriber(index, args):
                             except:
                                 not_found_items.append(item)
                         if len(not_found_items):
-                            msg['event_logic'] += "Subscription items %s not found!\n" % (str(not_found_items))
+                            msg['event_logic']['message'] += "Subscription items %s not found!\n" % (
+                                str(not_found_items))
                         else:
-                            msg['event_logic'] += "Unsubscribe success\n"
+                            msg['event_logic']['message'] += "Unsubscribe success\n"
         # remove last \n
         if len(msg['event_logic']):
-            msg['event_logic'] = msg['event_logic'][:-1]
+            msg['event_logic']['message'] = msg['event_logic']['message'][:-1]
     if 'event_msg' in args:
         if args['command'] == 'subscribe':
             if args['event_msg'] == 'all':
