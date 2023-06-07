@@ -13,10 +13,8 @@ LogicPath = '/home/sh2/logic.xml'
 
 
 class SHClient:
-    host = "127.0.0.1"  # RELEASE
-    # host='89.17.55.74' # DEBUG
-    port = "55555"  # RELEASE
-    # port = "57778" # DEBUG
+    host = "127.0.0.1"
+    port = "55555"
     aeskey = ""
     initClientDefValue = 0x7ef
     initClientID = 0
@@ -159,6 +157,12 @@ class SHClient:
             while self.logic.set_queue:
                 addr, state = self.logic.set_queue[0]
                 self.logic.set_queue.pop(0)
+
+                # для диммера устанавливаем время изменения яркости 0 секунд, если в запросе отсутствует
+                if (self.logic.items[addr].type == 'dimer-lamp' or self.logic.items[
+                    addr].type == 'dimmer-lamp') and len(state) == 2:
+                    state += b'\0'
+
                 self.setStatus(addr, state)
 
             # тут отправляются пуши
@@ -214,24 +218,19 @@ class SHClient:
                             data = self.fread(length)
                             dataLength -= length
                             if addr in self.logic.items:
-                                self.logic.items[addr].state = data['data']
-
+                                self.logic.items[addr].set_state(data['data'])
                                 # свитч записывается в историю сразу при изменении
                                 if self.logic.items[addr].type == 'switch':
                                     self.logic.items[addr].write_history()
-
-                                # self.logic.items[addr].state_timestamp = round(time.time())
                     elif PD == 7:
                         data = self.fread(dataLength)
                         addr = str(senderId) + ':' + str(senderSubId)
                         if addr in self.logic.items:
-                            self.logic.items[addr].state = data['data']
+                            self.logic.items[addr].set_state(data['data'])
 
                             # свитч записывается в историю сразу при изменении
                             if self.logic.items[addr].type == 'switch':
                                 self.logic.items[addr].write_history()
-
-                            # self.logic.items[addr].state_timestamp = round(time.time())
                     # push-message
                     elif destId in [self.initClientID, 2047] and destSubId == 32:
                         data = self.fread(dataLength)['data']
