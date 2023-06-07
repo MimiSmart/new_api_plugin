@@ -3,14 +3,55 @@ import struct
 import time
 from typing import Union
 
-hst_supported_types = {
+# size states in old history:
+# 'lamp': 1,
+# 'script': 1,
+# 'valve': 1,
+# 'door-sensor': 1,
+# 'dimer-lamp': 2,
+# 'dimmer-lamp': 2,
+# 'rgb-lamp': 1,
+# 'valve-heating': 6,
+# 'conditioner': 6,
+# 'blinds': 1,
+# 'gate': 1,
+# 'jalousie': 1,
+# 'temperature-sensor': 2,
+# 'illumination-sensor': 2,
+# 'motion-sensor': 2,
+# 'humidity-sensor': 2,
+# 'voltage-sensor': 2,
+# 'leak-sensor': 1,
+# 'switch': 1
+hst_supported_types = [
+    'lamp',
+    'script'
+    'valve',
+    'door-sensor',
+    'dimer-lamp',
+    'dimmer-lamp',
+    'rgb-lamp',
+    'valve-heating',
+    'conditioner',
+    'blinds',
+    'gate',
+    'jalousie',
+    'temperature-sensor',
+    'illumination-sensor',
+    'motion-sensor',
+    'humidity-sensor',
+    'voltage-sensor',
+    'leak-sensor',
+    'switch'
+]
+size_states = {
     'lamp': 1,
     'script': 1,
     'valve': 1,
     'door-sensor': 1,
     'dimer-lamp': 2,
     'dimmer-lamp': 2,
-    'rgb-lamp': 1,
+    'rgb-lamp': 4,
     'valve-heating': 6,
     'conditioner': 6,
     'blinds': 1,
@@ -29,6 +70,7 @@ hst_supported_types = {
 class Item:
     addr: str = None
     state: bytes = None
+    size_state: int = None
     crc: int = None
     history: list = None
     json_obj: dict = None
@@ -43,7 +85,9 @@ class Item:
         self.crc = crc
         self.json_obj = json_obj
         self.type = self.get_type()
-        self.hst_supported = self.type in hst_supported_types.keys()
+        self.hst_supported = self.type in hst_supported_types
+        # если размер прописан - берем его, иначе неограниченный
+        self.size_state = size_states[self.type] if self.type in size_states.keys() else 0
 
     def get_type(self):
         if 'type' in self.json_obj:
@@ -55,7 +99,7 @@ class Item:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
     def write_history(self):
-        if self.type in hst_supported_types.keys():
+        if self.type in hst_supported_types:
             id, subid = self.addr.split(':')
             # make filename
             filename = (4 - len(id)) * '0' + id + '-' + (3 - len(subid)) * '0' + subid + ' ' + self.type + '.hst2'
@@ -107,7 +151,7 @@ class Item:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
     def read_history(self) -> Union[None, dict]:
-        if self.type in hst_supported_types.keys():
+        if self.type in hst_supported_types:
             id, subid = self.addr.split(':')
             # make filename
             filename = (4 - len(id)) * '0' + id + '-' + (3 - len(subid)) * '0' + subid + ' ' + self.type + '.hst2'
@@ -306,3 +350,28 @@ class Item:
         elif self.type == 'leak-sensor':
             split_states = [{'state': item} for item in states]
         return split_states
+
+    def get_state(self):
+        try:
+            return self.state.hex(' ')
+        except:
+            return None
+
+    def set_state(self, state):
+        # если диммеру устанавливается статус с временем изменения яркости - игнорим время
+        if (self.type == 'dimer-lamp' or self.type == 'dimmer-lamp') and len(state) == 3:
+            state = state[:2]
+
+        # self.state = state
+        if self.size_state > 0 and len(state) <= self.size_state:
+            if self.state is not None:
+                self.state = state + self.state[len(state):]
+            else:
+                self.state = state
+                for x in range(self.size_state - len(state)):
+                    self.state += b'\0'
+        elif self.size_state == 0:
+            self.state = state
+        else:
+            print(
+                f"Item set-state func.: Error set state! Addr:{self.addr}; Type: {self.type}; Size state: {self.size_state}; Settable state:{state}")
