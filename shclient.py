@@ -4,11 +4,9 @@ import socket
 import struct
 import time
 
-from Crypto.Cipher import AES
+from Cryptodome.Cipher import AES
 
 from logic import Logic
-
-# from time import time
 
 LogPath = '/home/sh2/logs/log.txt'
 LogicPath = '/home/sh2/logic.xml'
@@ -168,7 +166,7 @@ class SHClient:
                 try:
                     tmp = push
                     self.logic.push_requests.pop(0)
-                    self.sendMessage(tmp['message'],tmp['message_type'],tmp['id'],tmp['subid'])
+                    self.sendMessage(tmp['message'], tmp['message_type'], tmp['id'], tmp['subid'])
                 except:
                     print(''.join(
                         ["Error send message on ", str(push['id']), ':', str(push['subid']), ', with type message = ',
@@ -348,7 +346,7 @@ class SHClient:
         length = 1 + len(message)
 
         data = struct.pack("2H4BH", self.initClientID, id, 5, 0, 0, subid, length)
-        data += message_type.to_bytes(1,'little')
+        data += message_type.to_bytes(1, 'little')
         data += message
 
         if not self.connectionResource.send(data):
