@@ -17,9 +17,6 @@ threads = list()
 
 home_path = '/home/sh2/exe/new_api_plugin/'  # RELEASE
 
-
-# home_path = './'
-
 def server_run(host, port):
     rest.app.add_api_websocket_route('/', ws.endpoint)
 
@@ -31,7 +28,11 @@ def server_run(host, port):
             openapi['paths'][key] = value
         for key, value in tmp['schemas'].items():
             openapi['components']['schemas'][key] = value
-    uvicorn.run(rest.app, host=host, port=port)
+    #
+    # config = Config(app=rest.app, protocol=NoPerMessageDeflateWebSocketProtocol, host=host, port=port, )
+    # server = Server(config)
+    # server.run()
+    uvicorn.run(rest.app, host=host, port=port, ws_per_message_deflate=False)
 
 
 # ---------read config-------------
