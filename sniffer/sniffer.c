@@ -47,7 +47,7 @@ static PyObject* run(PyObject* pSelf, PyObject* pArgs, PyObject* pKywdArgs){
     int saddr_size , data_size;
     struct sockaddr saddr;
 
-    unsigned char *buffer = (unsigned char *) malloc(65536); //Its Big!
+    unsigned char *buffer = (unsigned char *) malloc(65536);
     int sock_raw = socket( AF_PACKET , SOCK_RAW , htons(ETH_P_ALL)) ;
 
     //exit if socket is closed
@@ -65,7 +65,7 @@ static PyObject* run(PyObject* pSelf, PyObject* pArgs, PyObject* pKywdArgs){
             return Py_BuildValue("i",1);
         }
         //Now process the packet
-        
+
         unsigned short iphdrlen;
         struct iphdr *iph = (struct iphdr *)(buffer +  sizeof(struct ethhdr));
         iphdrlen = iph->ihl*4;
@@ -88,8 +88,8 @@ static PyObject* run(PyObject* pSelf, PyObject* pArgs, PyObject* pKywdArgs){
         for(int i=0;i<data_size - header_size;i++)
             data_payload[i] = buffer[header_size+i];
 
-        char* dest_ip = malloc(15);
-        char* src_ip = malloc(15);
+        char* dest_ip = malloc(20);
+        char* src_ip = malloc(20);
         strcpy(dest_ip,inet_ntoa(dest.sin_addr));
         strcpy(src_ip,inet_ntoa(source.sin_addr));
 
@@ -172,6 +172,10 @@ static PyObject* run(PyObject* pSelf, PyObject* pArgs, PyObject* pKywdArgs){
 
         free(src_ip);
         free(dest_ip);
+
+//        free(buffer);
+//        buffer = (unsigned char *) malloc(65536);
+
     }
     close(sock_raw);
     return Py_BuildValue("i",0);
