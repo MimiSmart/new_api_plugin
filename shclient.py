@@ -204,53 +204,15 @@ class SHClient:
                     self.logic.items[addr].history = list(struct.unpack("%dB" % (len(data)), data))
                     if addr in self.logic.history_requests:
                         self.logic.history_requests[addr]['responsed'] = True
+                # skip other packets
                 else:
-                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
-                                                                                                      data["data"])
-                    # print("senderId: %d, destId: %d, PD: %d, transid: %d, senderSubId: %d, destSubId: %d, dataLength:%d"%struct.unpack("2H4BH",data["data"]))
-
-                    if PD == 15:
-                        while dataLength > 0:
-                            line = self.fread(2)
-                            dataLength -= 2
-                            subid, length = struct.unpack("2B", line["data"])
-                            addr = str(senderId) + ':' + str(subid)
-                            data = self.fread(length)
-                            dataLength -= length
-                            if addr in self.logic.items:
-                                self.logic.items[addr].set_state(data['data'])
-                                # свитч записывается в историю сразу при изменении
-                                if self.logic.items[addr].type == 'switch':
-                                    self.logic.items[addr].write_history()
-                    elif PD == 7:
-                        data = self.fread(dataLength)
-                        addr = str(senderId) + ':' + str(senderSubId)
-                        if addr in self.logic.items:
-                            self.logic.items[addr].set_state(data['data'])
-
-                            # свитч записывается в историю сразу при изменении
-                            if self.logic.items[addr].type == 'switch':
-                                self.logic.items[addr].write_history()
-                    # push-message
-                    elif destId in [self.initClientID, 2047] and destSubId == 32:
-                        data = self.fread(dataLength)['data']
-                        type_message = data[0]
-                        message = data[1:-1]
-                        self.logic.push_events.append({'type': type_message, 'message': message.decode('utf-8'),
-                                                       'sender': ''.join([str(senderId), ':', str(senderSubId)])})
-                        print(''.join(["Received push message on ", str(senderId), ':', str(senderSubId), ' from ',
-                                       str(destId), ':', str(destSubId), ', with type message is ',
-                                       str(type_message),
-                                       ' and text message: ', message.decode('utf-8')]))
-                    # skip other packets
-                    else:
-                        self.fread(dataLength)
+                    self.fread(dataLength)
 
     def readXmlLogic(self):
         xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
         # параметр mac-id определяет какой id выдаст сервер
         if self.allowRetraslateUDP:
-            xml += "<get-shc retranslate-udp=\"yes\" mac-id=\"6234567890123456\"/>\n"
+            xml += "<get-shc retranslate-udp=\"no\" mac-id=\"6234567890123456\"/>\n"
         else:
             xml += "<get-shc mac-id=\"6234567890123456\"/>\n"
         # xml += '<get-shc keep-push="yes" crc32="0xD74D316D" mac-id="d66526a68c9718e9" current-id="45" retranslate-udp-optim="yes" remote-connection="yes" os-type="1" os-ver="33.0" send-ping-to="20" set-ping-to="30" resend="get-shc" srv-serial="61a4cce3" need-ip-ids="yes"/>'+"\n"
