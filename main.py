@@ -8,6 +8,7 @@ from threading import Thread
 import uvicorn
 
 import rest
+import udp
 import ws
 from logic import Logic
 from shclient import SHClient
@@ -15,7 +16,8 @@ from shclient import SHClient
 config = None
 threads = list()
 
-home_path = '/home/sh2/exe/new_api_plugin/'  # RELEASE
+home_path = '/home/sh2/exe/new_api_plugin/'
+
 
 def server_run(host, port):
     rest.app.add_api_websocket_route('/', ws.endpoint)
@@ -28,10 +30,6 @@ def server_run(host, port):
             openapi['paths'][key] = value
         for key, value in tmp['schemas'].items():
             openapi['components']['schemas'][key] = value
-    #
-    # config = Config(app=rest.app, protocol=NoPerMessageDeflateWebSocketProtocol, host=host, port=port, )
-    # server = Server(config)
-    # server.run()
     uvicorn.run(rest.app, host=host, port=port, ws_per_message_deflate=False)
 
 
@@ -44,6 +42,7 @@ logic = Logic(config['logic_path'])
 
 rest.init_logic(logic)
 ws.init_logic(logic)
+udp.init(logic, config['local_ip'])
 # --------run listener states------
 shClient = SHClient("", "", config['key'], config['logic_path'])
 shClient.init_logic(logic)
@@ -52,21 +51,20 @@ shClient.readFromBlockedSocket = True
 threads.append(Thread(target=shClient.listener, name='shclient', daemon=True))
 
 if shClient.run():
-    print('Thread [1/4] starting...')
+    print('Thread [1/5] starting...')
     threads[0].start()
-    # shClient.requestAllDevicesState()
     time.sleep(0.1)
 else:
     print('Error start SHclient')
 # -------run rest & ws-------------
 threads.append(Thread(target=server_run, args=[config['local_ip'], config['port']], name='server'))
-print('Thread [2/4] starting...')
+print('Thread [2/5] starting...')
 threads[1].start()
 
 time.sleep(1)
 
 threads.append(Thread(target=ws.listener, name='ws subscribe events', daemon=True))
-print('Thread [3/4] starting...')
+print('Thread [3/5] starting...')
 threads[2].start()
 
 
@@ -80,8 +78,12 @@ def history_writer():
 
 
 threads.append(Thread(target=history_writer, name='history writer', daemon=True))
-print('Thread [4/4] starting...')
+print('Thread [4/5] starting...')
 threads[3].start()
+
+threads.append(Thread(target=udp.run, args=[shClient.initClientID], name='udp sniffer', daemon=True))
+print('Thread [5/5] starting...')
+threads[4].start()
 
 # проверяем раз в 5 сек живы ли потоки, если нет, то перезапускаем нужный
 while True:
@@ -117,6 +119,13 @@ while True:
             threads[3].start()
         except:
             print('Error start history writer')
+    if not threads[4].is_alive():
+        try:
+            threads[4] = Thread(target=udp.run, name='udp sniffer', daemon=True)
+            print('Thread udp sniffer starting...')
+            threads[4].start()
+        except:
+            print('Error start udp sniffer')
     # проверка обновилась ли логика
     try:
         logic.update()
