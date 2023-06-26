@@ -259,6 +259,7 @@ def subscriber(index, args):
                 # remove duplicates
                 subscribes[index].event_items = \
                     list(set(subscribes[index].event_items))
+                subscribes[index].sent_init_status = False
                 if not msg['event_items']:
                     msg['event_items'] += "Subscribe success\n"
             # unsubscribe
@@ -284,6 +285,7 @@ def subscriber(index, args):
                     # remove duplicates
                     subscribes[index].event_items = \
                         list(set(subscribes[index].event_items))
+                    subscribes[index].sent_init_status = False
                     msg['event_items'] += "Subscribe all success\n"
                 # unsubscribe
                 else:
@@ -356,15 +358,10 @@ def subscriber(index, args):
 
 async def ws_send_message(websocket: WebSocket, message):
     message = json.dumps(message, ensure_ascii=False)
-    try:
-        message.encode('utf-8')
-        utf = True
-    except:
-        utf = False
 
     if websocket.client_state is WebSocketState.CONNECTED:
         await websocket.send_text(message)
-        print(f"Websocket send data: {message}, UTF-8 encoding: {utf}")
+        print(f"Websocket send data: {message} length:{len(message)}")
     else:
         addr = ':'.join(str(x) for x in [*websocket.client])
         print(f"[ws_send_message] Websocket {addr} state is not connected. Close connection")
@@ -377,6 +374,7 @@ def find_index(websocket):
     for cntr in range(len(subscribes)):
         if subscribes[cntr].websocket == websocket:
             return cntr
+    return None
 
 
 async def endpoint(websocket: WebSocket):
@@ -384,6 +382,7 @@ async def endpoint(websocket: WebSocket):
     # добавление нового коннекшна
     subscribes.append(SubscribeWebsocket(websocket))
     await websocket.accept()
+
     # --------------------------------
     try:
         # обработка сообщений от клиента
@@ -511,15 +510,17 @@ def listener():
                         ws_not_connected(index)
                         break
             if subscribes[index].event_items:
-                msg = dict()
+                msg = list()
                 for addr in subscribes[index].event_items:
                     if addr in logic.items.keys() and logic.items[addr].state is not None:
                         new_state = logic.items[addr].state
                         # if new state not equal old state, then send event
                         if not subscribes[index].sent_init_status or addr not in old_states \
                                 or old_states[addr] != new_state:
-                            subscribes[index].sent_init_status = True
-                            msg[addr] = new_state.hex(' ')
+                            msg.append({addr: new_state.hex(' ')})
+                            # msg[addr] = new_state.hex(' ')
+                if not subscribes[index].sent_init_status:
+                    subscribes[index].sent_init_status = True
                 # упаковываем все однотипные ивенты в 1 пакет
                 if msg:
                     response = {'type': 'subscribe-event', 'event_type': "state_item",
