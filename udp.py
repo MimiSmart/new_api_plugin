@@ -1,8 +1,6 @@
 import struct
 import traceback
 
-import sniffer.sniffer as sniffer
-
 from logic import Logic
 
 logic: Logic = None
@@ -162,7 +160,9 @@ def packet_handler(packet):
 def run(id):
     global server_id
     server_id = id
-    sniffer.run(callback=packet_handler)
-
+    # sniffer.run(callback=packet_handler)
+    while True:
+        import time
+        time.sleep(10)
 # packet_handler(None)
 # run()

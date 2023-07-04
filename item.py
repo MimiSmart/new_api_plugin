@@ -296,7 +296,6 @@ class Item:
         split_states = item[self.type].parse_hst(states)
         return split_states
 
-
     # parse new history, .hst2 files
     def parse_hst2(self, states):
         global item

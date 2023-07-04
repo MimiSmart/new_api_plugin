@@ -29,7 +29,6 @@ class SHClient:
 
     readFromBlockedSocket = False
     runSuccess = False
-    running = False
 
     logic: Logic
 
@@ -142,98 +141,116 @@ class SHClient:
                 s += struct.pack("B", value[i])
         return s
 
-    def sender(self):
-        cntr = 0
-        while 1:
-            if self.running:
-                # тут проверяются запросы на историю итемов
-                if self.logic.history_requests:
-                    for addr in self.logic.history_requests.keys():
-                        if not self.logic.items[addr].history and not self.logic.history_requests[addr]['requested']:
-                            self.logic.history_requests[addr]['requested'] = True
-                            self.getDeviceHistory(addr, self.logic.history_requests[addr]['range_time'],
-                                                  self.logic.history_requests[addr]['scale'])
-                            cntr = 0
-
-                # тут освобождается очередь сетстатусов
-                while self.logic.set_queue:
-                    addr, state = self.logic.set_queue[0]
-                    self.logic.set_queue.pop(0)
-
-                    # для диммера устанавливаем время изменения яркости 0 секунд, если в запросе отсутствует
-                    if (self.logic.items[addr].type == 'dimer-lamp' or self.logic.items[
-                        addr].type == 'dimmer-lamp') and len(state) == 2:
-                        state += b'\0'
-
-                    self.setStatus(addr, state)
-
-                    cntr = 0
-
-                # тут отправляются пуши
-                for push in self.logic.push_requests:
-                    try:
-                        tmp = push
-                        self.logic.push_requests.pop(0)
-                        self.sendMessage(tmp['message'], tmp['message_type'], tmp['id'], tmp['subid'])
-                        cntr = 0
-                    except:
-                        print(''.join(
-                            ["Error send message on ", str(push['id']), ':', str(push['subid']),
-                             ', with type message = ',
-                             str(push['message_type']), ' and text message: "', push['message'], '"']))
-                        break
-
-                # ping server to avoid kick by timeout
-                if cntr >= 600:
-                    self.ping()
-                    cntr = 0
-                else:
-                    cntr += 1
-
-                time.sleep(0.1)
-            else:
-                break
-
     def listener(self):
-        self.running = True
-        # print("Started listen packets")
+        print("Started listen packets")
+        cntr = 0
         while True:
-            data = self.fread(10)
-            unpackData = struct.unpack("L6B", data["data"])
-            shHead = "".join(chr(char) for char in unpackData[1:])
+            # тут проверяются запросы на историю итемов
+            if self.logic.history_requests:
+                for addr in self.logic.history_requests.keys():
+                    if not self.logic.items[addr].history and not self.logic.history_requests[addr]['requested']:
+                        self.logic.history_requests[addr]['requested'] = True
+                        self.getDeviceHistory(addr, self.logic.history_requests[addr]['range_time'],
+                                              self.logic.history_requests[addr]['scale'])
 
-            if shHead != "" and unpackData[0] == 6:
-                continue
-            if shHead == "shcxml":
-                self.fread(unpackData[0] - 6)
-                continue
-            elif shHead == "messag":
-                self.fread(unpackData[0] - 6)
-                continue
-            elif shHead == "hismin":
-                line = self.fread(unpackData[0] - 6)
-                id, subid, data = struct.unpack("HB%ds" % (len(line['data']) - 3), line['data'])
-                addr = str(id) + ':' + str(subid)
-                self.logic.items[addr].history = list(struct.unpack("%dB" % (len(data)), data))
-                if addr in self.logic.history_requests:
-                    self.logic.history_requests[addr]['responsed'] = True
-            # skip other packets
+            # тут освобождается очередь сетстатусов
+            while self.logic.set_queue:
+                addr, state = self.logic.set_queue[0]
+                self.logic.set_queue.pop(0)
+
+                # для диммера устанавливаем время изменения яркости 0 секунд, если в запросе отсутствует
+                if (self.logic.items[addr].type == 'dimer-lamp' or self.logic.items[
+                    addr].type == 'dimmer-lamp') and len(state) == 2:
+                    state += b'\0'
+
+                self.setStatus(addr, state)
+
+            # тут отправляются пуши
+            for push in self.logic.push_requests:
+                try:
+                    tmp = push
+                    self.logic.push_requests.pop(0)
+                    self.sendMessage(tmp['message'], tmp['message_type'], tmp['id'], tmp['subid'])
+                except:
+                    print(''.join(
+                        ["Error send message on ", str(push['id']), ':', str(push['subid']), ', with type message = ',
+                         str(push['message_type']), ' and text message: "', push['message'], '"']))
+                    break
+
+            # ping server to avoid kick by timeout
+            if cntr >= 60:
+                self.requestAllDevicesState()
+                cntr = 0
             else:
-                self.fread(dataLength)
+                cntr += 1
+                data = self.fread(10)
 
-    def ping(self):
-        xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
-        xml += "<ping/>\n"
-        xml += "</smart-house-commands>\n"
-        xmlsize = len(xml)
-        data = struct.pack("L", xmlsize) + xml.encode('utf-8')
-        self.connectionResource.send(data)
+                unpackData = struct.unpack("L6B", data["data"])
+
+                shHead = "".join(chr(char) for char in unpackData[1:])
+
+                if shHead != "" and unpackData[0] == 6:
+                    continue
+                if shHead == "shcxml":
+                    line = self.fread(unpackData[0] - 6)
+                    continue
+                elif shHead == "messag":
+                    message = self.fread(unpackData[0] - 6)
+                    continue
+                elif shHead == "hismin":
+                    line = self.fread(unpackData[0] - 6)
+                    id, subid, data = struct.unpack("HB%ds" % (len(line['data']) - 3), line['data'])
+                    addr = str(id) + ':' + str(subid)
+                    self.logic.items[addr].history = list(struct.unpack("%dB" % (len(data)), data))
+                    if addr in self.logic.history_requests:
+                        self.logic.history_requests[addr]['responsed'] = True
+                else:
+                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
+                                                                                                      data["data"])
+                    # print("senderId: %d, destId: %d, PD: %d, transid: %d, senderSubId: %d, destSubId: %d, dataLength:%d"%struct.unpack("2H4BH",data["data"]))
+
+                    if PD == 15:
+                        while dataLength > 0:
+                            line = self.fread(2)
+                            dataLength -= 2
+                            subid, length = struct.unpack("2B", line["data"])
+                            addr = str(senderId) + ':' + str(subid)
+                            data = self.fread(length)
+                            dataLength -= length
+                            if addr in self.logic.items:
+                                self.logic.items[addr].set_state(data['data'])
+                                # свитч записывается в историю сразу при изменении
+                                if self.logic.items[addr].type == 'switch':
+                                    self.logic.items[addr].write_history()
+                    elif PD == 7:
+                        data = self.fread(dataLength)
+                        addr = str(senderId) + ':' + str(senderSubId)
+                        if addr in self.logic.items:
+                            self.logic.items[addr].set_state(data['data'])
+
+                            # свитч записывается в историю сразу при изменении
+                            if self.logic.items[addr].type == 'switch':
+                                self.logic.items[addr].write_history()
+                    # push-message
+                    elif destId in [self.initClientID, 2047] and destSubId == 32:
+                        data = self.fread(dataLength)['data']
+                        type_message = data[0]
+                        message = data[1:-1]
+                        self.logic.push_events.append({'type': type_message, 'message': message.decode('utf-8'),
+                                                       'sender': ''.join([str(senderId), ':', str(senderSubId)])})
+                        print(''.join(["Received push message on ", str(senderId), ':', str(senderSubId), ' from ',
+                                       str(destId), ':', str(destSubId), ', with type message is ',
+                                       str(type_message),
+                                       ' and text message: ', message.decode('utf-8')]))
+                    # skip other packets
+                    else:
+                        self.fread(dataLength)
 
     def readXmlLogic(self):
         xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
         # параметр mac-id определяет какой id выдаст сервер
         if self.allowRetraslateUDP:
-            xml += "<get-shc retranslate-udp=\"no\" mac-id=\"6234567890123456\"/>\n"
+            xml += "<get-shc retranslate-udp=\"yes\" mac-id=\"6234567890123456\"/>\n"
         else:
             xml += "<get-shc mac-id=\"6234567890123456\"/>\n"
         # xml += '<get-shc keep-push="yes" crc32="0xD74D316D" mac-id="d66526a68c9718e9" current-id="45" retranslate-udp-optim="yes" remote-connection="yes" os-type="1" os-ver="33.0" send-ping-to="20" set-ping-to="30" resend="get-shc" srv-serial="61a4cce3" need-ip-ids="yes"/>'+"\n"

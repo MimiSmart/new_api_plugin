@@ -66,6 +66,14 @@ def get_history(args):
     # если история есть в .hst2 то берем оттуда
     if args['addr'] not in logic.items:
         return {"type": "error", "message": "Item not found"}
+    try:
+        if args['range_time'][0] > 1000000000000:
+            args['range_time'][0] = int(args['range_time'][0] / 1000)
+        if args['range_time'][1] > 1000000000000:
+            args['range_time'][1] = int(args['range_time'][1] / 1000)
+    except:
+        return {"type": "error", "message": "Invalid data"}
+
     hst = logic.items[args['addr']].get_history(*args['range_time'], args['scale'])
     if hst:
         return {"type": "response", "addr": args['addr'], "history": hst}
@@ -359,14 +367,11 @@ def subscriber(index, args):
 async def ws_send_message(websocket: WebSocket, message):
     message = json.dumps(message, ensure_ascii=False)
 
-    if websocket.client_state is WebSocketState.CONNECTED:
+    try:
         await websocket.send_text(message)
         print(f"Websocket send data: {message} length:{len(message)}")
-    else:
-        addr = ':'.join(str(x) for x in [*websocket.client])
-        print(f"[ws_send_message] Websocket {addr} state is not connected. Close connection")
-        await websocket.close()
-        subscribes.pop(find_index(websocket))
+    except:
+        pass
 
 
 def find_index(websocket):
@@ -414,24 +419,12 @@ async def endpoint(websocket: WebSocket):
             try:
                 if reply:
                     await ws_send_message(websocket, reply)
-                    # await websocket.send_text(json.dumps(reply, ensure_ascii=False))
             except Exception as err:
                 await websocket.close()
                 subscribes.pop(find_index(websocket))
 
-                try:
-                    reply = json.dumps(reply, ensure_ascii=False)
-                    reply.encode('utf-8')
-
-                    utf = True
-                except:
-                    utf = False
-
-                print(f"Error send data to websocket. Data: {reply}, UTF-8 encoding: {utf}")
+                print(f"Error send data to websocket. Data: {json.dumps(reply)}")
                 print(f"Unexpected {err=}, {type(err)=}")
-                break
-            # except:
-            #     print(f"Error send data to websocket. Data: {reply}")
     # disconnect client
     except WebSocketDisconnect:
         subscribes.pop(find_index(websocket))
