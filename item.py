@@ -4,6 +4,8 @@ from typing import Union
 
 import more_itertools
 
+from items import *
+
 # size states in old history:
 # 'lamp': 1,
 # 'script': 1,
@@ -68,6 +70,27 @@ size_states = {
 }
 
 hst_path = '/home/sh2/exe/new_api_plugin/history/'
+
+item = {
+    'lamp': lamp,
+    'script': lamp,
+    'valve': lamp,
+    'door-sensor': lamp,
+    'dimmer-lamp': dimmer,
+    'dimer-lamp': dimmer,
+    'rgb-lamp': rgb,
+    'valve-heating': heating,
+    'conditioner': conditioner,
+    'jalousie': blinds,
+    'blinds': blinds,
+    'gate': blinds,
+    'temperature-sensor': sensor,
+    'motion-sensor': sensor,
+    'illumination-sensor': sensor,
+    'humidity-sensor': sensor,
+    'leak-sensor': leak,
+}
+
 
 class Item:
     addr: str = None
@@ -146,7 +169,8 @@ class Item:
                             key = list(hst.keys())
                             key.sort()
                             key = key[-1]
-                    except:
+                    except Exception as ex:
+                        print(''.join(traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)))
                         pass
                     with open(hst_path + self.filename, 'ab') as f:
                         try:
@@ -165,10 +189,12 @@ class Item:
                                     f.write(self.state)
                                 else:
                                     f.write(b'undefined')
-                        except:
+                        except Exception as ex:
+                            print(''.join(traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)))
                             pass
                 # if file hst not found
                 else:
+                    os.makedirs(hst_path, exist_ok=True)
                     with open(hst_path + self.filename, 'wb') as f:
                         f.write(0xFF.to_bytes(1, 'little'))
                         f.write(round(time.time()).to_bytes(4, 'little', signed=False))
@@ -225,8 +251,8 @@ class Item:
     def add_timestamp_hst(self, hst, start, end, scale):
         if not len(hst): return hst
         cntr = 0
-        diff = end - start
-        steps = int(diff / (scale * 60))
+        # diff = end - start
+        # steps = int(diff / (scale * 60))
         stepDiff = scale * 60
         for item in hst:
             item['timestamp'] = int(start + (stepDiff * cntr))
@@ -247,106 +273,33 @@ class Item:
         elif (hst := self.read_history()) and int(list(hst.keys())[0]) <= int(start_time):
             # определяем с какой временной метки в истории начинать
             keys = list(hst.keys())
-
             hst = dict(zip(keys, map(self.parse_hst2, hst.values())))
-            index = 0
+            tmp = []
+            for value in hst.values():
+                tmp.extend(value)
+            hst = tmp
             # переводим указатель на start_time состояние и оттуда записываем историю в result
             # пока указатель не дойдет до end_time
-            cntr = 0
-            result = []
-            while keys[index] + cntr * 60 < end_time:
-                # skip some iter
-                if keys[index] + cntr * 60 < start_time:
-                    if not cntr:
-                        cntr = round((start_time - keys[index]) / 60)
-                    else:
-                        cntr += 1
-                    continue
-
-                #заполняем результат нужными сегментами, с шагом scale
-                if cntr < len(hst[keys[index]]):
-                    result.extend(hst[keys[index]][cntr::scale])
-                    cntr = len(hst[keys[index]])
-                # переходим к поиску в след timestamp`e
-                elif index + 1 < len(keys) and keys[index + 1] < end_time:
-                    index += 1
-                    cntr = 0
-                else:
-                    break
-            result = self.add_timestamp_hst(result, start_time, end_time, scale)
+            start = (start_time - keys[0]) // 60
+            steps = (end_time - start_time) // 60
+            end = start + steps
+            result = self.add_timestamp_hst(hst[start:end:scale], start_time, end_time, scale)
             return result
         return None
 
     # parse old history, .hst files
     def parse_hst(self, states):
+        global item
         # switch пропускаю т.к. он стейт присылает только при нажатии и история, собираемая раз в минуту будет бесполезной
-        split_states = []
         if not isinstance(states, list):
             states = [states]
-        if self.type in ['lamp', 'script', 'valve', 'door-sensor']:
-            split_states = [{'state': (item & 1).to_bytes(1, 'big').hex(' ')} for item in states]
-        elif self.type in ['dimmer-lamp', 'dimer-lamp']:
-            split_states = [{'state': bytes(states[index:index + 2]).hex(' ')}
-                            for index in range(0, len(states), 2)]
-            # split_states = [
-            #     {
-            #         'on': states[index] & 1,
-            #         'brightness': round(int((states[index + 1]) * 100 / 255.0), 1)
-            #     }
-            #     for index in range(0, len(states), 2)
-            # ]
-        elif self.type == 'rgb-lamp':
-            # rgb in old history save only value (brightness)
-            split_states = [{'state': item.to_bytes(1, 'big').hex(' ')} for item in states]
-            # split_states = [
-            #     {'on': item > 0,
-            #      'value': item if item > 0 else 0
-            #      }
-            #     for item in states]
-        elif self.type == 'valve-heating':
-            split_states = [{'state': bytes(states[index:index + 5]).hex(' ')}
-                            for index in range(0, len(states), 5)]
-            # split_states = [
-            #     # opt0 - видимо вкл/выкл, 0xFA на вкл
-            #     # opt1 - дробная сенсора
-            #     # opt2 - целая сенсора
-            #     # opt3 - дробная установленная
-            #     # opt4 - целая установленная
-            #     {
-            #         'on': 1 if states[index] == 0xFA else 0,
-            #         'set_temperature': round(states[index + 4] + (states[index + 3] / 255.0), 2),
-            #         'sensor_temperature': round(states[index + 2] + (states[index + 1] / 255.0), 2)
-            #     }
-            #     for index in range(0, len(states), 5)]
-        elif self.type in 'conditioner':
-            split_states = [{'state': states[i].to_bytes(1, 'big').hex(' ')} for i in range(4, len(states), 5)]
-            # split_states = [{'temperature': states[i]} for i in range(4, len(states), 5)]
-        elif self.type in ['jalousie', 'blinds', 'gate']:
-            split_states = [{'state': item.to_bytes(1, 'big').hex(' ')} for item in states]
-            # split_states = []
-            # for item in states:
-            #     tmp = {'state': None}
-            #     if not item:
-            #         tmp['state'] = 'close'
-            #     elif item == 0x7D:
-            #         tmp['state'] = 'half opened'
-            #     elif item == 0xFA:
-            #         tmp['state'] = 'opened'
-            #     else:
-            #         tmp['state'] = 'undefined'
-            #     split_states.append(tmp)
-        elif self.type in ['temperature-sensor', 'motion-sensor', 'illumination-sensor', 'humidity-sensor']:
-            split_states = [{'state': bytes(states[index:index + 2]).hex(' ')} for index in
-                            range(0, len(states), 2)]
-            # split_states = [{'state': round(states[index + 1] + (states[index] / 255.0), 2)} for index in
-            #                 range(0, len(states), 2)]
-        elif self.type == 'leak-sensor':
-            split_states = [{'state': item.to_bytes(1, 'big').hex(' ')} for item in states]
-            # split_states = [{'state': item} for item in states]
+        split_states = item[self.type].parse_hst(states)
         return split_states
+
 
     # parse new history, .hst2 files
     def parse_hst2(self, states):
+        global item
         # switch пропускаю т.к. он стейт присылает только при нажатии и история, собираемая раз в минуту будет бесполезной
         split_states = []
         if states is None: return None
@@ -357,76 +310,7 @@ class Item:
             split_states = [{'state': 'undefined'} for item in states]
             return split_states
 
-        if self.type in ['lamp', 'script', 'valve', 'door-sensor']:
-            split_states = [{'state': (item & 1).to_bytes(1, 'big').hex(' ')} for item in states]
-            # split_states = [{'state': item & 1} for item in states]
-        elif self.type in ['dimmer-lamp', 'dimer-lamp']:
-            split_states = [{'state': bytes(states[index:index + 2]).hex(' ')}
-                            for index in range(0, len(states), 2)]
-            # split_states = [
-            #     {
-            #         'on': states[index] & 1,
-            #         'brightness': round(int((states[index + 1]) * 100 / 255.0), 1)
-            #     }
-            #     for index in range(0, len(states), 2)
-            # ]
-        elif self.type == 'rgb-lamp':
-            split_states = [{'state': bytes(states[index:index + 4]).hex(' ')}
-                            for index in range(0, len(states), 4)]
-            # split_states = [
-            #     {
-            #         'on': states[index] & 1,
-            #         'value': round(int((states[index + 1]) * 100 / 255.0), 1),
-            #         'saturation': round(int((states[index + 2]) * 100 / 255.0), 1),
-            #         'hue': round(int((states[index + 3]) * 100 / 255.0), 1),
-            #     }
-            #     for index in range(0, len(states), 4)
-            # ]
-        elif self.type == 'valve-heating':
-            # opt0 - старшие 4 бита - номер автоматизации, младшие - вкл/выкл
-            # opt1 - дробная установленная
-            # opt2 - целая установленная
-            # opt3 - дробная сенсора
-            # opt4 - целая сенсора
-            # opt5 - 0xFF, 0xFA или 0
-
-            split_states = [{'state': bytes(states[index:index + 6]).hex(' ')}
-                            for index in range(0, len(states), 6)]
-
-            # split_states = [
-            #     {
-            #         'on': states[index] & 1,
-            #         'set_temperature': round(states[index + 2] + (states[index + 1] / 255.0), 2),
-            #         'sensor_temperature': round(states[index + 4] + (states[index + 3] / 255.0), 2),
-            #         'num_automation': states[index] >> 4 if not states[index + 5] else states[index + 5]
-            #     }
-            #     for index in range(0, len(states), 6)]
-        elif self.type in 'conditioner':
-            split_states = [{'state': bytes(states[index:index + 6]).hex(' ')}
-                            for index in range(0, len(states), 6)]
-
-            # split_states = [
-            #     {
-            #         'on': states[index] & 1,
-            #         'mode': states[index] >> 4,
-            #         'temperature': states[index + 1],  # нужно добавить t-min
-            #         'vane-hor': states[index + 3] & 0x0F,
-            #         'vane-ver': states[index + 3] >> 4,
-            #         'fan': states[index + 4] & 0x0F
-            #     }
-            #     for index in range(0, len(states), 6)
-            # ]
-        elif self.type in ['jalousie', 'blinds', 'gate']:
-            split_states = [{'state': item.to_bytes(1, 'big').hex(' ')} for item in states]
-            # split_states = [{'state': item} for item in states]
-        elif self.type in ['temperature-sensor', 'motion-sensor', 'illumination-sensor', 'humidity-sensor']:
-            split_states = [{'state': bytes(states[index:index + 2]).hex(' ')}
-                            for index in range(0, len(states), 2)]
-            # split_states = [{'state': round(states[index + 1] + (states[index] / 255.0), 2)} for index in
-            #                 range(0, len(states), 2)]
-        elif self.type == 'leak-sensor':
-            split_states = [{'state': item.to_bytes(1, 'big').hex(' ')} for item in states]
-            # split_states = [{'state': item} for item in states]
+        split_states = item[self.type].parse_hst2(states)
         return split_states
 
     def get_state(self):
@@ -452,46 +336,10 @@ class Item:
                 f"Item set-state func.: Error set state! Addr:{self.addr}; Type: {self.type}; Size state: {self.size_state}; Settable state:{state}")
 
     def presetter(self, state):
-        state = list(state)
-        if self.type in ['lamp', 'valve-heating', 'valve']:
-            # если 0xFF - изменить состояние на противоположное
-            if state[0] == 0xFF:
-                state[0] = self.state[0] ^ 1 if self.state[0] & 1 else self.state[0] | 1
-        elif self.type in ['dimer-lamp', 'dimmer-lamp']:
-            # если диммеру устанавливается статус с временем изменения яркости - игнорим время
-            if len(state) == 3:
-                state = state[:2]
-            # если 0xFF - изменить состояние на противоположное
-            if state[0] == 0xFF:
-                state = self.state[0] ^ 1 if self.state[0] & 1 else self.state[0] | 1
-            # если 0xFE - не изменять состояние
-            for index in range(len(state)):
-                if state[index] == 0xFE:
-                    state[index] = self.state[index]
-        elif self.type == 'rgb-lamp':
-            # если rgb устанавливается статус с временем изменения яркости - игнорим время
-            if len(state) == 5:
-                state = state[:4]
-            # если 0xFF - изменить состояние на противоположное
-            if state[0] == 0xFF:
-                state[0] = self.state[0] ^ 1 if self.state[0] & 1 else self.state[0] | 1
-
-            # если 0xFE - не изменять состояние
-            for index in range(len(state)):
-                if state[index] == 0xFE:
-                    state[index] = self.state[index]
-        elif self.type in ['jalousie', 'gate', 'blinds']:
-            # на жалюзи нужно получать данные от сервера, т.к. непонятно когда в каком положении они будут
-
-            # если на жалюзи устанавливается статус с временем хода - игнорим время
-            if len(state) == 2:
-                state = state[0]
-            # если 0xFF - изменить состояние на противоположное
-            if state[0] == 0xFF:
-                if self.state[0] in [0, 2]:
-                    state[0] = 3
-                elif self.state[0] in [1, 3]:
-                    state[0] = 2
-                # state[0] = self.state[0] ^ 1 if self.state[0] & 1 else self.state[0] | 1
-        state = bytes(state)
+        global item
+        if self.type in ['lamp', 'valve', 'dimer-lamp', 'dimmer-lamp', 'rgb-lamp', 'jalousie', 'gate', 'blinds',
+                         'valve-heating']:
+            state = list(state)
+            state = item[self.type].preset(state)
+            state = bytes(state)
         return state
