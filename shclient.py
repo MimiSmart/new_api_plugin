@@ -52,12 +52,14 @@ class SHClient:
 
         if self.allowRetraslateUDP:
             if self.allowReadXmlLogic:
-                self.readXmlLogic()
+                if not self.readXmlLogic():
+                    return False
                 if b"</smart-house>" not in self.logicXml:
                     print("Could not get xml logic from smart-house server")
                     return False
             elif self.xmlFile != "" and os.path.exists(self.xmlFile):
-                self.readXmlLogic()
+                if not self.readXmlLogic():
+                    return False
                 # with open(self.xmlFile) as f:
                 #     self.logicXml = f.read()
         if self.logicXml == "":
@@ -79,16 +81,14 @@ class SHClient:
     def authorization(self):
         if self.connectionResource:
             data = self.fread(16)
-            if data["success"]:
-                cipher = AES.new(self.aeskey.encode('utf-8'), AES.MODE_ECB)
-                encrypted = cipher.encrypt(data['data'])
-                self.connectionResource.send(encrypted)
+            if data is None:
+                return 0
             else:
-                print("could not read data for authorization")
-                self.disconnect()
+                cipher = AES.new(self.aeskey.encode('utf-8'), AES.MODE_ECB)
+                encrypted = cipher.encrypt(data)
+                self.connectionResource.send(encrypted)
 
     def fread(self, size):
-        success = True
         res = bytes()
         if self.readFromBlockedSocket:
             while (size - len(res)) > 0:
@@ -97,7 +97,7 @@ class SHClient:
                 # len data equal 0 if server disconnect
                 if not len(response):
                     print('SHclient disconnected')
-                    exit(0)
+                    return None
                 res += response
         else:
             self.connectionResource.setblocking(False)  # set socket to nonblock status
@@ -105,7 +105,7 @@ class SHClient:
                 res += self.connectionResource.recvfrom(size - len(res))[0]
             self.connectionResource.setblocking(True)  # set socket to block status
 
-        return {"success": success, "data": res}
+        return res
 
     def disconnect(self):
         if self.connectionResource:
@@ -184,56 +184,65 @@ class SHClient:
             else:
                 cntr += 1
                 data = self.fread(10)
-
-                unpackData = struct.unpack("L6B", data["data"])
+                if data is None:
+                    return 0
+                unpackData = struct.unpack("L6B", data)
 
                 shHead = "".join(chr(char) for char in unpackData[1:])
 
                 if shHead != "" and unpackData[0] == 6:
                     continue
-                if shHead == "shcxml":
-                    line = self.fread(unpackData[0] - 6)
-                    continue
-                elif shHead == "messag":
-                    message = self.fread(unpackData[0] - 6)
-                    continue
+                if shHead in ["shcxml", "messag"]:
+                    tmp = self.fread(unpackData[0] - 6)
+                    if tmp is None:
+                        return 0
+                    else: continue
                 elif shHead == "hismin":
                     line = self.fread(unpackData[0] - 6)
-                    id, subid, data = struct.unpack("HB%ds" % (len(line['data']) - 3), line['data'])
+                    if line is None:
+                        return 0
+                    id, subid, data = struct.unpack("HB%ds" % (len(line) - 3), line)
                     addr = str(id) + ':' + str(subid)
                     self.logic.items[addr].history = list(struct.unpack("%dB" % (len(data)), data))
                     if addr in self.logic.history_requests:
                         self.logic.history_requests[addr]['responsed'] = True
                 else:
-                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",
-                                                                                                      data["data"])
+                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",data)
                     # print("senderId: %d, destId: %d, PD: %d, transid: %d, senderSubId: %d, destSubId: %d, dataLength:%d"%struct.unpack("2H4BH",data["data"]))
 
                     if PD == 15:
                         while dataLength > 0:
                             line = self.fread(2)
+                            if line is None:
+                                return 0
                             dataLength -= 2
-                            subid, length = struct.unpack("2B", line["data"])
+                            subid, length = struct.unpack("2B", line)
                             addr = str(senderId) + ':' + str(subid)
                             data = self.fread(length)
+                            if data is None:
+                                return 0
                             dataLength -= length
                             if addr in self.logic.items:
-                                self.logic.items[addr].set_state(data['data'])
+                                self.logic.items[addr].set_state(data)
                                 # свитч записывается в историю сразу при изменении
                                 if self.logic.items[addr].type == 'switch':
                                     self.logic.items[addr].write_history()
                     elif PD == 7:
                         data = self.fread(dataLength)
+                        if data is None:
+                            return 0
                         addr = str(senderId) + ':' + str(senderSubId)
                         if addr in self.logic.items:
-                            self.logic.items[addr].set_state(data['data'])
+                            self.logic.items[addr].set_state(data)
 
                             # свитч записывается в историю сразу при изменении
                             if self.logic.items[addr].type == 'switch':
                                 self.logic.items[addr].write_history()
                     # push-message
                     elif destId in [self.initClientID, 2047] and destSubId == 32:
-                        data = self.fread(dataLength)['data']
+                        data = self.fread(dataLength)
+                        if data is None:
+                            return 0
                         type_message = data[0]
                         message = data[1:-1]
                         self.logic.push_events.append({'type': type_message, 'message': message.decode('utf-8'),
@@ -243,11 +252,11 @@ class SHClient:
                                        str(type_message),
                                        ' and text message: ', message.decode('utf-8')]))
                     # skip other packets
-                    else:
-                        self.fread(dataLength)
+                    elif self.fread(dataLength) is None:
+                        return 0
 
     def readXmlLogic(self):
-        xml = '<?xml version="1+0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
+        xml = f'<?xml version="1+0" encoding="UTF-8"?>\n<smart-house-commands>\n'
         # параметр mac-id определяет какой id выдаст сервер
         if self.allowRetraslateUDP:
             xml += "<get-shc retranslate-udp=\"yes\" mac-id=\"6234567890123456\"/>\n"
@@ -268,70 +277,49 @@ class SHClient:
                 if logicXml != "":
                     break
                 data = self.fread(10)
-                if not data["success"]:
-                    return
-                unpackData = struct.unpack("L6B", data["data"])
+                if data is None:
+                    return False
+                unpackData = struct.unpack("L6B", data)
                 shHead = ""
                 for i in range(1, 7):
                     shHead += chr(unpackData[i])
 
                 if shHead == "shcxml":
                     length = unpackData[0]
-                    line = self.fread(4)
-                    if not line["success"]:
-                        return
-                    crc = struct.unpack("L", line["data"])
-                    line = self.fread(1)
-                    if not line["success"]:
-                        return
-                    addata = struct.unpack("B", line["data"])
+                    line = self.fread(5)
+                    if line is None:
+                        return False
+                    addata = struct.unpack("B", line[-1].to_bytes(1,'big'))
                     self.initClientID = self.initClientDefValue - addata[0]
 
                     receivedFileSize = length - 11
-                    tmpdata = self.fread(receivedFileSize)
-                    if not tmpdata["success"]:
-                        return
-                    logicXml = tmpdata["data"]
-                    self.logicXml = tmpdata["data"]
+                    logicXml = self.fread(receivedFileSize)
+                    if logicXml is None:
+                        return False
+                    self.logicXml = logicXml
 
                     self.logicXml.replace(b'&amp', b'#amp')
                     self.logicXml.replace(b'&', b'&amp')
                     self.logicXml.replace(b'#amp', b'&amp')
-
-                    # if self.xmlFile != "" and self.saveXmlLogic and (not os.path.exists(self.xmlFile)
-                    #                                                  or (os.path.exists(
-                    #             self.xmlFile) and os.path.getsize(self.xmlFile) != receivedFileSize)):
-                    # with open(self.xmlFile, "w") as f:
-                    # f.write(self.logicXml.decode('utf-8'))
-                    # chmod(self.xmlFile, 0o666)
-                elif shHead == "messag":
-                    message = self.fread(unpackData[0] - 6)
-                    if not message["success"]:
-                        return
-                else:
-                    tmpdata = self.fread(unpackData[0] - 6)
-                    if not tmpdata["success"]:
-                        return
+                elif shHead == 'pkfail':
+                    print('shclient: invalid key')
+                    return False
+                elif self.fread(unpackData[0] - 6) is None:
+                    return False
                 time.sleep(0.1)
+        return True
 
     # addr - str "id:subid". ex.: "999:99"
     # range_date - list of 2 timestamps, ex.: [1683800000,1683800001]
     def getDeviceHistory(self, addr, range_time, scale):
-        id, subid = addr.split(':')
-        history = list()
+        id, subid = map(int,addr.split(':'))
 
-        local_now = datetime.datetime.now().astimezone()
-        gmtdiff = local_now.tzinfo.utcoffset(local_now).seconds * -1
-
-        xml = ""
-        xml += '<?xml version="1.0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
-        xml += '<get-history-minutely id="' + id + '" sub-id="' + subid + '"'
+        xml = f'<?xml version="1.0" encoding="UTF-8"?>\n<smart-house-commands>\n' \
+              f'<get-history-minutely id="{id}" sub-id="{subid}"'
         if scale is not None and scale > 1:
-            xml += ' scale="' + str(scale) + '"'
-        xml += ' start-timet="' + str(range_time[0]) + '"'
-        xml += ' end-timet="' + str(range_time[1]) + '"'
-        xml += "/>\n"
-        xml += "</smart-house-commands>\n"
+            xml += f' scale="{scale}"'
+        xml += f' start-timet="{range_time[0]}" end-timet="{range_time[1]}"/>\n' \
+               f'</smart-house-commands>\n"'
 
         xmlsize = len(xml)
         data = struct.pack("L", xmlsize) + xml.encode('utf-8')
@@ -352,5 +340,3 @@ class SHClient:
             print(''.join(
                 ["Error send message on ", str(id), ':', str(subid), ', with type message = ', str(message_type),
                  ' and text message: "', message, '"']))
-    # def getDisplayedDevices(self):
-    #         query = '#area[not(@permissions)]/item[@type!="rtsp" and @type!="remote-control" and @type!="multi-room" and @type!="virtual"]'
