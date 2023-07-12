@@ -1,4 +1,4 @@
-def preset(state):
+def preset(self, state):
     # если диммеру устанавливается статус с временем изменения яркости - игнорим время
     if len(state) == 3:
         state = state[:2]

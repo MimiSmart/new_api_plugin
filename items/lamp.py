@@ -1,4 +1,4 @@
-def preset(state):
+def preset(self, state):
     # если 0xFF - изменить состояние на противоположное
     if state[0] == 0xFF:
         state[0] = self.state[0] ^ 1 if self.state[0] & 1 else self.state[0] | 1

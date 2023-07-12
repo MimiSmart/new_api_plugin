@@ -51,15 +51,40 @@ def get_all_states(args):
 
 
 def set_state(args):
-    try:
-        tmp = [int(args['state'][i:i + 2], 16) for i in
-               range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
+    # try:
+    tmp = [int(args['state'][i:i + 2], 16) for i in
+           range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
+    if logic.items[args['addr']].type == 'valve-heating':
+        # set temperature for heating
+        logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
+        # manual off
+        if tmp[0] == 0:
+            # set manual mode for heating
+            logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
+            # set 0 for heating
+            logic.set_queue.append((args['addr'], [0]))
+        # manual on
+        elif tmp[0] == 1:
+            # set manual mode for heating
+            logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
+            # set 0 for heating
+            logic.set_queue.append((args['addr'], [1]))
+        # always off
+        elif tmp[0] == 2:
+            # set always-off mode for heating
+            logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:1']))
+        # auto
+        elif tmp[0] == 3:
+            # set auto mode for heating
+            logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:0']))
+    else:
         logic.set_queue.append((args['addr'], tmp))
-        logic.items[args['addr']].set_state(bytes(tmp))
-        state = logic.items[args['addr']].get_state()
-        return {"type": "response", "data": {args['addr']: state}}
-    except:
-        return {"type": "error", "message": "Invalid data"}
+
+    logic.items[args['addr']].set_state(bytes(tmp))
+    state = logic.items[args['addr']].get_state()
+    return {"type": "response", "data": {args['addr']: state}}
+    # except:
+    # return {"type": "error", "message": "Invalid data"}
 
 
 def get_history(args):

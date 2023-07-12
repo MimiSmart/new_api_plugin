@@ -1,1 +1,1 @@
-__all__ = ['blinds', 'conditioner', 'dimmer', 'heating', 'lamp', 'leak', 'rgb', 'sensor']
+__all__ = ['blinds', 'conditioner', 'dimmer', 'heating', 'lamp', 'leak', 'rgb', 'sensor','switch']

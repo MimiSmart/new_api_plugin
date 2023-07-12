@@ -159,7 +159,7 @@ class SHClient:
                 self.logic.set_queue.pop(0)
 
                 # для диммера устанавливаем время изменения яркости 0 секунд, если в запросе отсутствует
-                if (self.logic.items[addr].type == 'dimer-lamp' or self.logic.items[
+                if int(addr.split(':')[0]) < 1000 and (self.logic.items[addr].type == 'dimer-lamp' or self.logic.items[
                     addr].type == 'dimmer-lamp') and len(state) == 2:
                     state += b'\0'
 
@@ -196,7 +196,8 @@ class SHClient:
                     tmp = self.fread(unpackData[0] - 6)
                     if tmp is None:
                         return 0
-                    else: continue
+                    else:
+                        continue
                 elif shHead == "hismin":
                     line = self.fread(unpackData[0] - 6)
                     if line is None:
@@ -207,7 +208,7 @@ class SHClient:
                     if addr in self.logic.history_requests:
                         self.logic.history_requests[addr]['responsed'] = True
                 else:
-                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH",data)
+                    senderId, destId, PD, transid, senderSubId, destSubId, dataLength = struct.unpack("2H4BH", data)
                     # print("senderId: %d, destId: %d, PD: %d, transid: %d, senderSubId: %d, destSubId: %d, dataLength:%d"%struct.unpack("2H4BH",data["data"]))
 
                     if PD == 15:
@@ -224,9 +225,6 @@ class SHClient:
                             dataLength -= length
                             if addr in self.logic.items:
                                 self.logic.items[addr].set_state(data)
-                                # свитч записывается в историю сразу при изменении
-                                if self.logic.items[addr].type == 'switch':
-                                    self.logic.items[addr].write_history()
                     elif PD == 7:
                         data = self.fread(dataLength)
                         if data is None:
@@ -234,10 +232,6 @@ class SHClient:
                         addr = str(senderId) + ':' + str(senderSubId)
                         if addr in self.logic.items:
                             self.logic.items[addr].set_state(data)
-
-                            # свитч записывается в историю сразу при изменении
-                            if self.logic.items[addr].type == 'switch':
-                                self.logic.items[addr].write_history()
                     # push-message
                     elif destId in [self.initClientID, 2047] and destSubId == 32:
                         data = self.fread(dataLength)
@@ -289,7 +283,7 @@ class SHClient:
                     line = self.fread(5)
                     if line is None:
                         return False
-                    addata = struct.unpack("B", line[-1].to_bytes(1,'big'))
+                    addata = struct.unpack("B", line[-1].to_bytes(1, 'big'))
                     self.initClientID = self.initClientDefValue - addata[0]
 
                     receivedFileSize = length - 11
@@ -312,7 +306,7 @@ class SHClient:
     # addr - str "id:subid". ex.: "999:99"
     # range_date - list of 2 timestamps, ex.: [1683800000,1683800001]
     def getDeviceHistory(self, addr, range_time, scale):
-        id, subid = map(int,addr.split(':'))
+        id, subid = map(int, addr.split(':'))
 
         xml = f'<?xml version="1.0" encoding="UTF-8"?>\n<smart-house-commands>\n' \
               f'<get-history-minutely id="{id}" sub-id="{subid}"'

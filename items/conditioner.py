@@ -1,3 +1,7 @@
+def preset(self, state):
+    return state
+
+
 def parse_hst(states):
     split_states = [{'state': states[i].to_bytes(1, 'big').hex(' ')} for i in range(4, len(states), 5)]
     # split_states = [{'temperature': states[i]} for i in range(4, len(states), 5)]

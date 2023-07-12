@@ -1,4 +1,4 @@
-def preset(state):
+def preset(self, state):
     # если rgb устанавливается статус с временем изменения яркости - игнорим время
     if len(state) == 5:
         state = state[:4]
