@@ -1,4 +1,3 @@
-import datetime
 import os
 import socket
 import struct
@@ -306,14 +305,17 @@ class SHClient:
     # addr - str "id:subid". ex.: "999:99"
     # range_date - list of 2 timestamps, ex.: [1683800000,1683800001]
     def getDeviceHistory(self, addr, range_time, scale):
-        id, subid = map(int, addr.split(':'))
+        id, subid = addr.split(':')
 
-        xml = f'<?xml version="1.0" encoding="UTF-8"?>\n<smart-house-commands>\n' \
-              f'<get-history-minutely id="{id}" sub-id="{subid}"'
+        xml = ""
+        xml += '<?xml version="1.0" encoding="UTF-8"?>' + "\n" + '<smart-house-commands>' + "\n"
+        xml += '<get-history-minutely id="' + id + '" sub-id="' + subid + '"'
         if scale is not None and scale > 1:
-            xml += f' scale="{scale}"'
-        xml += f' start-timet="{range_time[0]}" end-timet="{range_time[1]}"/>\n' \
-               f'</smart-house-commands>\n"'
+            xml += ' scale="' + str(scale) + '"'
+        xml += ' start-timet="' + str(range_time[0]) + '"'
+        xml += ' end-timet="' + str(range_time[1]) + '"'
+        xml += "/>\n"
+        xml += "</smart-house-commands>\n"
 
         xmlsize = len(xml)
         data = struct.pack("L", xmlsize) + xml.encode('utf-8')
