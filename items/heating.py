@@ -1,10 +1,25 @@
-def preset(state):
-    # тут будет 2 варианта. 2 байта если по апи кто то устанавливает. 6 байт если пришло от старого сервера
-    # pass
+def preset(self, state):
+    # from server
+    if len(state) == 6:
+        new_state = [0]
+        new_state.extend(state[1:5])
+        # manual mode
+        if state[5] == 0xFF:
+            new_state[0] = state[0] & 1
+        # always-off
+        elif state[5] == 0xFE:
+            new_state[0] = 2
+        # auto
+        elif state[5] == 0:
+            new_state[0] = 3
+        state = new_state
+    # from client
+    elif len(state) == 2:
+        if self.state is None:
+            state = [state[0], 0, state[1], 0, 0]
+        else:
+            state = [state[0], self.state[1], state[1], self.state[3], self.state[4]]
 
-    # если 0xFF - изменить состояние на противоположное
-    if state[0] == 0xFF:
-        state[0] = self.state[0] ^ 1 if self.state[0] & 1 else self.state[0] | 1
     return state
 
 
@@ -28,8 +43,8 @@ def parse_hst(states):
 
 def parse_hst2(states):
     # 0й байт:
-    # 0 - выкл, переводит в ручной режим
-    # 1 - вкл, переводит в ручной режим
+    # 0 - выкл в ручном режиме
+    # 1 - вкл в ручном режиме
     # 2 - всегда выкл
     # 3 - авто
     # opt1 - дробная установленная

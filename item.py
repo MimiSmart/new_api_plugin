@@ -314,7 +314,11 @@ class Item:
 
     def get_state(self):
         try:
-            return self.state.hex(' ')
+            if self.type == 'valve-heating':
+                # когда режим always-off / manual - температуру не показывает
+                return bytes([self.state[0], self.state[2]]).hex(' ')
+            else:
+                return self.state.hex(' ')
         except:
             return None
 
@@ -323,6 +327,7 @@ class Item:
 
         if self.size_state > 0 and len(state) <= self.size_state:
             if self.state is not None:
+                # если до этого статус был длиннее - остальное оставляем как было
                 self.state = state + self.state[len(state):]
             else:
                 self.state = state
@@ -336,9 +341,11 @@ class Item:
 
     def presetter(self, state):
         global item
-        if self.type in ['lamp', 'valve', 'dimer-lamp', 'dimmer-lamp', 'rgb-lamp', 'jalousie', 'gate', 'blinds',
-                         'valve-heating']:
-            state = list(state)
-            state = item[self.type].preset(state)
-            state = bytes(state)
-        return state
+        if state is None:
+            return None
+        else:
+            if self.type in item.keys():
+                state = list(state)
+                state = item[self.type].preset(self, state)
+                state = bytes(state)
+            return state

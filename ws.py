@@ -52,12 +52,50 @@ def get_all_states(args):
 
 def set_state(args):
     try:
-        tmp = [int(args['state'][i:i + 2], 16) for i in
-               range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
-        logic.set_queue.append((args['addr'], tmp))
-        logic.items[args['addr']].set_state(bytes(tmp))
-        state = logic.items[args['addr']].get_state()
-        return {"type": "response", "data": {args['addr']: state}}
+        # обработка строк, для set_state
+        try:
+            tmp = [int(args['state'][i:i + 2], 16) for i in
+                   range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
+        except:
+            args['state'] = args['state'].encode('utf-8').hex()
+            tmp = [int(args['state'][i:i + 2], 16) for i in
+                   range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
+        if int(args['addr'].split(':')[0]) < 1000:
+            if logic.items[args['addr']].type == 'valve-heating':
+                # set temperature for heating
+                logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
+                # manual off
+                if tmp[0] == 0:
+                    # set manual mode for heating
+                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
+                    # set 0 for heating
+                    logic.set_queue.append((args['addr'], [0]))
+                # manual on
+                elif tmp[0] == 1:
+                    # set manual mode for heating
+                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
+                    # set 0 for heating
+                    logic.set_queue.append((args['addr'], [1]))
+                # always off
+                elif tmp[0] == 2:
+                    # set always-off mode for heating
+                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:1']))
+                # auto
+                elif tmp[0] == 3:
+                    # set auto mode for heating
+                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:0']))
+            else:
+                logic.set_queue.append((args['addr'], tmp))
+
+            logic.items[args['addr']].set_state(bytes(tmp))
+            state = logic.items[args['addr']].get_state()
+            if logic.items[args['addr']].type in ['blinds', 'jalousie', 'gate']:
+                # print('debug. blinds')
+                pass
+            else:
+                return {"type": "response", "data": {args['addr']: state}}
+        else:
+            logic.set_queue.append((args['addr'], tmp))
     except:
         return {"type": "error", "message": "Invalid data"}
 
@@ -66,13 +104,22 @@ def get_history(args):
     # если история есть в .hst2 то берем оттуда
     if args['addr'] not in logic.items:
         return {"type": "error", "message": "Item not found"}
+    # check correct time
     try:
+        # ms
         if args['range_time'][0] > 1000000000000:
-            args['range_time'][0] = int(args['range_time'][0] / 1000)
+            args['range_time'][0] = args['range_time'][0] / 1000
         if args['range_time'][1] > 1000000000000:
-            args['range_time'][1] = int(args['range_time'][1] / 1000)
+            args['range_time'][1] = args['range_time'][1] / 1000
+        # float
+        args['range_time'][0] = int(args['range_time'][0])
+        args['range_time'][1] = int(args['range_time'][1])
+
     except:
         return {"type": "error", "message": "Invalid data"}
+
+    if not logic.items[args['addr']].hst_supported:
+        return {"type": "error", "message": "History is not supported for this item"}
 
     hst = logic.items[args['addr']].get_history(*args['range_time'], args['scale'])
     if hst:
@@ -443,6 +490,9 @@ def listener():
     while True:
         length = len(subscribes)
         for index in range(length):
+            if index >= length:
+                break
+            # handle response for get_history requests (partial, only if history from server 2.0)
             if logic.history_requests:
                 copy = logic.history_requests.copy()
                 for key, item in copy.items():
@@ -537,6 +587,7 @@ def listener():
                         else:
                             ws_not_connected(index)
                             break
+            length = len(subscribes)
 
         # avoid exception: 'dictionary changed size during iteration'
         tmp_items = logic.items.copy()
