@@ -1,7 +1,7 @@
 import os
 import time
 from typing import Union
-import traceback
+
 import more_itertools
 
 from items import *
@@ -129,32 +129,32 @@ class Item:
     # if there was no data for some time - the next data will be written as a new block with a timestamp
     def write_history(self):
         global hst_path
-        if self.type in hst_supported_types:
-            id, subid = self.addr.split(':')
+        try:
+            if self.type in hst_supported_types:
+                id, subid = self.addr.split(':')
 
-            if self.type == 'switch':
-                if not os.path.exists(hst_path + self.filename):
-                    open(hst_path + self.filename, 'wb').close()
-                with open(hst_path + self.filename, 'ab') as f:
-                    if self.state is not None:
-                        f.write(0xFF.to_bytes(1, 'little'))
-                        f.write(round(time.time()).to_bytes(4, 'little', signed=False))
-                        f.write(0xFF.to_bytes(1, 'little'))
-                        f.write(self.state)
-            else:
-                if os.path.exists(hst_path + self.filename):
+                if self.type == 'switch':
+                    if not os.path.exists(hst_path + self.filename):
+                        open(hst_path + self.filename, 'wb').close()
+                    with open(hst_path + self.filename, 'ab') as f:
+                        if self.state is not None:
+                            f.write(0xFF.to_bytes(1, 'little'))
+                            f.write(round(time.time()).to_bytes(4, 'little', signed=False))
+                            f.write(0xFF.to_bytes(1, 'little'))
+                            f.write(self.state)
+                else:
+                    if os.path.exists(hst_path + self.filename):
 
-                    hst = self.read_history()
-                    if hst is None:
-                        return False
-                    key = list(hst.keys())
-                    key.sort()
-                    key = key[-1]
+                        hst = self.read_history()
+                        if hst is None:
+                            return False
+                        key = list(hst.keys())
+                        key.sort()
+                        key = key[-1]
 
-                    # если в последнем timestamp записей меньше чем должно быть к текущему моменту
-                    # значит апи отключали, просто забиваем undef
-                    diff = int(time.time() - (key + (len(hst[key]) * 60 / self.size_state)))
-                    try:
+                        # если в последнем timestamp записей меньше чем должно быть к текущему моменту
+                        # значит апи отключали, просто забиваем undef
+                        diff = int(time.time() - (key + (len(hst[key]) * 60 / self.size_state)))
                         if diff > 60 and hst[key][0] != 0xFF:
                             # cntr = int(diff / 60)
                             with open(hst_path + self.filename, 'ab') as f:
@@ -169,11 +169,7 @@ class Item:
                             key = list(hst.keys())
                             key.sort()
                             key = key[-1]
-                    except Exception as ex:
-                        print(''.join(traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)))
-                        pass
-                    with open(hst_path + self.filename, 'ab') as f:
-                        try:
+                        with open(hst_path + self.filename, 'ab') as f:
                             # if item wasn`t undefined and cur state is not undefined
                             if hst[key][0] != 0xFF and self.state is not None and self.state[0] != 0xFF:
                                 f.write(self.state)
@@ -189,21 +185,22 @@ class Item:
                                     f.write(self.state)
                                 else:
                                     f.write(b'undefined')
-                        except Exception as ex:
-                            print(''.join(traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)))
-                            pass
-                # if file hst not found
-                else:
-                    os.makedirs(hst_path, exist_ok=True)
-                    with open(hst_path + self.filename, 'wb') as f:
-                        f.write(0xFF.to_bytes(1, 'little'))
-                        f.write(round(time.time()).to_bytes(4, 'little', signed=False))
-                        f.write(0xFF.to_bytes(1, 'little'))
-                        if self.state is not None and self.state[0] != 0xFF:
-                            f.write(self.state)
-                        else:
-                            f.write(b'undefined')
-        else:
+                    # if file hst not found
+                    else:
+                        os.makedirs(hst_path, exist_ok=True)
+                        with open(hst_path + self.filename, 'wb') as f:
+                            f.write(0xFF.to_bytes(1, 'little'))
+                            f.write(round(time.time()).to_bytes(4, 'little', signed=False))
+                            f.write(0xFF.to_bytes(1, 'little'))
+                            if self.state is not None and self.state[0] != 0xFF:
+                                f.write(self.state)
+                            else:
+                                f.write(b'undefined')
+            else:
+                return False
+
+        except Exception as ex:
+            print(f'Error write history for {self.addr} item')
             return False
 
     # .hst structure:
@@ -243,6 +240,10 @@ class Item:
                     # убираем пустые
                     while ([] in data_segments):
                         data_segments.remove([])
+
+                    for timestamp in timestamps:
+                        if timestamp > 2000000000:
+                            print(f'read_history: timestamp error! {self.addr=} {timestamp=}')
 
                     parsed_hst = dict(zip(timestamps, data_segments))
                     return parsed_hst
