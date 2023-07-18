@@ -1,7 +1,7 @@
 import os
 import time
 from typing import Union
-
+import traceback
 import more_itertools
 
 from items import *
@@ -55,7 +55,7 @@ size_states = {
     'dimer-lamp': 2,
     'dimmer-lamp': 2,
     'rgb-lamp': 4,
-    'valve-heating': 6,
+    'valve-heating': 5,
     'conditioner': 6,
     'blinds': 1,
     'gate': 1,
