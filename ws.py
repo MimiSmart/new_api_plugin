@@ -62,8 +62,6 @@ def set_state(args):
                    range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
         if int(args['addr'].split(':')[0]) < 1000:
             if logic.items[args['addr']].type == 'valve-heating':
-                # set temperature for heating
-                logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
                 # manual off
                 if tmp[0] == 0:
                     # set manual mode for heating
@@ -79,11 +77,12 @@ def set_state(args):
                 # always off
                 elif tmp[0] == 2:
                     # set always-off mode for heating
-                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:1']))
-                # auto
-                elif tmp[0] == 3:
-                    # set auto mode for heating
-                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:0']))
+                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-1']))
+                # auto and others automations (server2.0)
+                else:
+                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:{tmp[0] - 3}']))
+                    # set temperature for heating
+                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
             else:
                 logic.set_queue.append((args['addr'], tmp))
 

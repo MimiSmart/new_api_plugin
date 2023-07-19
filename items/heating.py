@@ -1,25 +1,58 @@
 def preset(self, state):
+    # 0й - старшие 4 бита автоматизация, младшие вкл-выкл
+    # 1й байт - дробная часть установленной температуры
+    # 2й байт - целая установленная
+    # 3й байт - дробная датчика
+    # 4й байт - целая датчика
+
     # from server
     if len(state) == 6:
-        new_state = [0]
-        new_state.extend(state[1:5])
+        state[0] = state[0] & 1
         # manual mode
-        if state[5] == 0xFF:
-            new_state[0] = state[0] & 1
+        # if state[5] == 0xFF:
+        # state[0] |= 0<<4
         # always-off
-        elif state[5] == 0xFE:
-            new_state[0] = 2
+        if state[5] == 0xFE:
+            state[0] |= 1 << 4
         # auto
         elif state[5] == 0:
-            new_state[0] = 3
-        state = new_state
+            state[0] |= 2 << 4
+        # other automations (server2.0)
+        else:
+            state[0] |= (state[5] + 2) << 4
+        state.pop(-1)
     # from client
     elif len(state) == 2:
         if self.state is None:
             state = [state[0], 0, state[1], 0, 0]
+            # if is not state[0]: state[0] = 0
+            # if state[0]==1: state[0] = 1
+            # always-off
+            if state[0] == 2:
+                state[0] = 0x10
+            # auto
+            elif state[0] == 3:
+                state[0] = 0x20
+            # other automations (server2.0)
+            else:
+                state[0] = (state - 1) << 4
         else:
             state = [state[0], self.state[1], state[1], self.state[3], self.state[4]]
-
+            # if is not state[0]: state[0] = 0
+            # if state[0]==1: state[0] = 1
+            # always-off
+            if state[0] == 2:
+                state[0] = 0x10
+            # auto
+            elif state[0] == 3:
+                set_temp = self.state[2] + self.state[1] / 250.0
+                sensor_temp = self.state[4] + self.state[3] / 250.0
+                state[0] = 0x20 | int(set_temp > sensor_temp)
+            # other automations (server2.0)
+            else:
+                set_temp = self.state[2] + self.state[1] / 250.0
+                sensor_temp = self.state[4] + self.state[3] / 250.0
+                state[0] = ((state - 1) << 4) | int(set_temp > sensor_temp)
     return state
 
 

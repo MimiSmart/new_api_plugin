@@ -315,11 +315,7 @@ class Item:
 
     def get_state(self):
         try:
-            if self.type == 'valve-heating':
-                # когда режим always-off / manual - температуру не показывает
-                return bytes([self.state[0], self.state[2]]).hex(' ')
-            else:
-                return self.state.hex(' ')
+            return self.state.hex(' ')
         except:
             return None
 
