@@ -37,6 +37,14 @@ def server_run(host, port):
 with open(home_path + 'config') as f:
     config = json.load(f)
 
+# --------read key-----------------
+with open('/home/sh2/keys.txt') as f:
+    keys = [item.split(' ')[0] for item in f.read().split("\n")]
+    for key in keys:
+        if len(key) == 16:
+            config['key'] = key
+            break
+
 # ---------read logic--------------
 logic = Logic(config['logic_path'])
 
