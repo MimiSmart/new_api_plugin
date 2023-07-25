@@ -332,6 +332,8 @@ class Item:
                     self.state += b'\0'
         elif self.size_state == 0:
             self.state = state
+        elif len(state) > self.size_state:
+            self.state = state[:self.size_state]
         else:
             print(
                 f"Item set-state func.: Error set state! Addr:{self.addr}; Type: {self.type}; Size state: {self.size_state}; Settable state:{state}")

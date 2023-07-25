@@ -9,10 +9,11 @@ def preset(self, state):
     if len(state) == 6:
         state[0] = state[0] & 1
         # manual mode
-        # if state[5] == 0xFF:
-        # state[0] |= 0<<4
+        if state[5] == 0xFF:
+            # state[0] |= 0<<4
+            pass
         # always-off
-        if state[5] == 0xFE:
+        elif state[5] == 0xFE:
             state[0] |= 1 << 4
         # auto
         elif state[5] == 0:
@@ -25,10 +26,12 @@ def preset(self, state):
     elif len(state) == 2:
         if self.state is None:
             state = [state[0], 0, state[1], 0, 0]
-            # if is not state[0]: state[0] = 0
-            # if state[0]==1: state[0] = 1
+            if not state[0]:
+                state[0] = 0
+            elif state[0] == 1:
+                state[0] = 1
             # always-off
-            if state[0] == 2:
+            elif state[0] == 2:
                 state[0] = 0x10
             # auto
             elif state[0] == 3:
@@ -38,10 +41,12 @@ def preset(self, state):
                 state[0] = (state - 1) << 4
         else:
             state = [state[0], self.state[1], state[1], self.state[3], self.state[4]]
-            # if is not state[0]: state[0] = 0
-            # if state[0]==1: state[0] = 1
+            if not state[0]:
+                state[0] = 0
+            elif state[0] == 1:
+                state[0] = 1
             # always-off
-            if state[0] == 2:
+            elif state[0] == 2:
                 state[0] = 0x10
             # auto
             elif state[0] == 3:

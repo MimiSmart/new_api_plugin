@@ -6,10 +6,10 @@ def preset(self, state):
 
 
 def parse_hst(states):
-    return [{'state': (item & 1).to_bytes(1, 'big').hex(' ')} for item in states]
+    return [{'state': item.to_bytes(1, 'big').hex(' ')} for item in states]
 
 
 def parse_hst2(states):
-    split_states = [{'state': (item & 1).to_bytes(1, 'big').hex(' ')} for item in states]
+    split_states = [{'state': item.to_bytes(1, 'big').hex(' ')} for item in states]
     # split_states = [{'state': item & 1} for item in states]
     return split_states

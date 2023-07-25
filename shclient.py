@@ -12,8 +12,8 @@ LogicPath = '/home/sh2/logic.xml'
 
 
 class SHClient:
-    host = "127.0.0.1"
-    port = "55555"
+    host = ""
+    port = ""
     aeskey = ""
     initClientDefValue = 0x7ef
     initClientID = 0

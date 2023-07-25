@@ -44,7 +44,7 @@ rest.init_logic(logic)
 ws.init_logic(logic)
 udp.init(logic, config['local_ip'])
 # --------run listener states------
-shClient = SHClient("", "", config['key'], config['logic_path'])
+shClient = SHClient(config['local_ip'], config['udp_port'], config['key'], config['logic_path'])
 shClient.init_logic(logic)
 shClient.readFromBlockedSocket = True
 
@@ -96,7 +96,7 @@ threads[4].start()
 while True:
     if not threads[0].is_alive():
         try:
-            shClient = SHClient("", "", config['key'], config['logic_path'])
+            shClient = SHClient(config['local_ip'], config['udp_port'], config['key'], config['logic_path'])
             shClient.readFromBlockedSocket = True
             shClient.init_logic(logic)
             if shClient.run():
