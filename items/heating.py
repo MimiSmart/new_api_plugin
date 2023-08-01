@@ -25,7 +25,12 @@ def preset(self, state):
     # from client
     elif len(state) == 2:
         if self.state is None:
+            temp = state[1]
             state = [state[0], 0, state[1], 0, 0]
+            # не менять состояние
+            if temp == 0xFF:
+                state[2] = 0
+
             if not state[0]:
                 state[0] = 0
             elif state[0] == 1:
@@ -39,8 +44,13 @@ def preset(self, state):
             # other automations (server2.0)
             else:
                 state[0] = (state - 1) << 4
+
         else:
             state = [state[0], self.state[1], state[1], self.state[3], self.state[4]]
+            # не менять состояние
+            if state[2] == 0xFF:
+                state[2] = self.state[2]
+
             if not state[0]:
                 state[0] = 0
             elif state[0] == 1:

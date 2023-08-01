@@ -120,10 +120,12 @@ def set_state(item: SetState):
             elif tmp[0] == 2:
                 # set always-off mode for heating
                 logic.set_queue.append(('1000:102', [ord(x) for x in f'{item.addr}\0as:1']))
-            # auto
-            elif tmp[0] == 3:
-                # set auto mode for heating
-                logic.set_queue.append(('1000:102', [ord(x) for x in f'{item.addr}\0as:0']))
+            # auto and others automations (server2.0)
+            else:
+                logic.set_queue.append(('1000:102', [ord(x) for x in f'{item.addr}\0as:{tmp[0] - 3}']))
+                # set temperature for heating. if 0xFF, then save old temperature
+                if tmp[1] != 0xFF:
+                    logic.set_queue.append(('1000:102', [ord(x) for x in f'{item.addr}\0ts:{tmp[1]}']))
         else:
             logic.set_queue.append((item.addr, tmp))
 

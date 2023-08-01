@@ -72,7 +72,7 @@ def set_state(args):
                 elif tmp[0] == 1:
                     # set manual mode for heating
                     logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
-                    # set 0 for heating
+                    # set 1 for heating
                     logic.set_queue.append((args['addr'], [1]))
                 # always off
                 elif tmp[0] == 2:
@@ -81,8 +81,10 @@ def set_state(args):
                 # auto and others automations (server2.0)
                 else:
                     logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:{tmp[0] - 3}']))
-                    # set temperature for heating
-                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
+                    # set temperature for heating. if 0xFF, then save old temperature
+                    if tmp[1] != 0xFF:
+                        logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
+
             else:
                 logic.set_queue.append((args['addr'], tmp))
 
@@ -502,7 +504,7 @@ def listener():
                         if item['client'].client_state is WebSocketState.CONNECTED:
                             asyncio.run(ws_send_message(item['client'], response))  # if client connected
                         else:
-                            ws_not_connected(find_index(websocket))
+                            ws_not_connected(index)
                             break
 
             if subscribes[index].event_msg:
