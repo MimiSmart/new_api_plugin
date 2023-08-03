@@ -128,125 +128,120 @@ class Item:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
     def write_history(self):
-        global hst_path
-        try:
-            if self.type in hst_supported_types:
-                id, subid = self.addr.split(':')
-
-                if self.type == 'switch':
-                    if not os.path.exists(hst_path + self.filename):
-                        open(hst_path + self.filename, 'wb').close()
-                    with open(hst_path + self.filename, 'ab') as f:
-                        if self.state is not None:
-                            f.write(0xFF.to_bytes(1, 'little'))
-                            f.write(round(time.time()).to_bytes(4, 'little', signed=False))
-                            f.write(0xFF.to_bytes(1, 'little'))
-                            f.write(self.state)
-                else:
-                    if os.path.exists(hst_path + self.filename):
-
-                        hst = self.read_history()
-                        if hst is None:
-                            return False
-                        key = list(hst.keys())
-                        key.sort()
-                        key = key[-1]
-
-                        # если в последнем timestamp записей меньше чем должно быть к текущему моменту
-                        # значит апи отключали, просто забиваем undef
-                        diff = int(time.time() - (key + (len(hst[key]) * 60 / self.size_state)))
-                        if diff > 60 and hst[key][0] != 0xFF:
-                            # cntr = int(diff / 60)
-                            with open(hst_path + self.filename, 'ab') as f:
-                                f.write(0xFF.to_bytes(1, 'little'))
-                                new_timestamp = round(key + (len(hst[key]) * 60 / self.size_state) + 60)
-                                f.write(new_timestamp.to_bytes(4, 'little', signed=False))
-                                f.write(0xFF.to_bytes(1, 'little'))
-                                f.write(b'undefined')
-                            hst = self.read_history()
-                            if hst is None:
-                                return False
-                            key = list(hst.keys())
-                            key.sort()
-                            key = key[-1]
-                        with open(hst_path + self.filename, 'ab') as f:
-                            # if item wasn`t undefined and cur state is not undefined
-                            if hst[key][0] != 0xFF and self.state is not None and self.state[0] != 0xFF:
-                                f.write(self.state)
-                            # if item was undefined and cur state is undefined - skip
-                            elif hst[key][0] == 0xFF and self.state is not None and self.state[0] == 0xFF:
-                                pass
-                            # new timestamp
-                            else:
-                                f.write(0xFF.to_bytes(1, 'little'))
-                                f.write(round(time.time()).to_bytes(4, 'little', signed=False))
-                                f.write(0xFF.to_bytes(1, 'little'))
-                                if self.state[0] != 0xFF:
-                                    f.write(self.state)
-                                else:
-                                    f.write(b'undefined')
-                    # if file hst not found
-                    else:
-                        os.makedirs(hst_path, exist_ok=True)
-                        with open(hst_path + self.filename, 'wb') as f:
-                            f.write(0xFF.to_bytes(1, 'little'))
-                            f.write(round(time.time()).to_bytes(4, 'little', signed=False))
-                            f.write(0xFF.to_bytes(1, 'little'))
-                            if self.state is not None and self.state[0] != 0xFF:
-                                f.write(self.state)
-                            else:
-                                f.write(b'undefined')
-            else:
-                return False
-
-        except Exception as ex:
-            print(f'Error write history for {self.addr} item')
-            return False
+        return False
+        # def write(mode, time, state):
+        #     with open(hst_path + self.filename, mode) as f:
+        #         f.write(0xFF.to_bytes(1, 'little'))
+        #         f.write(time)
+        #         f.write(0xFF.to_bytes(1, 'little'))
+        #         f.write(state)
+        #
+        # global hst_path
+        # try:
+        #     if self.type in hst_supported_types:
+        #         id, subid = self.addr.split(':')
+        #
+        #         if self.type == 'switch':
+        #             if not os.path.exists(hst_path + self.filename):
+        #                 open(hst_path + self.filename, 'wb').close()
+        #             if self.state is not None:
+        #                 write('ab', round(time.time()).to_bytes(4, 'little', signed=False), self.state)
+        #         else:
+        #             if os.path.exists(hst_path + self.filename):
+        #
+        #                 hst = self.read_history()
+        #                 if hst is None:
+        #                     return False
+        #                 key = list(hst.keys())
+        #                 key.sort()
+        #                 key = key[-1]
+        #
+        #                 # если в последнем timestamp записей меньше чем должно быть к текущему моменту
+        #                 # значит апи отключали, просто забиваем undef
+        #                 diff = int(time.time() - (key + (len(hst[key]) * 60 / self.size_state)))
+        #                 if diff > 60 and hst[key][0] != 0xFF:
+        #                     # cntr = int(diff / 60)
+        #                     new_timestamp = round(key + (len(hst[key]) * 60 / self.size_state) + 60)
+        #                     write('ab', new_timestamp.to_bytes(4, 'little', signed=False), b'undefined')
+        #
+        #                     hst = self.read_history()
+        #                     if hst is None:
+        #                         return False
+        #                     key = list(hst.keys())
+        #                     key.sort()
+        #                     key = key[-1]
+        #
+        #                 # if item wasn`t undefined and cur state is not undefined
+        #                 if hst[key][0] != 0xFF and self.state is not None and self.state[0] != 0xFF:
+        #                     with open(hst_path + self.filename, 'ab') as f:
+        #                         f.write(self.state)
+        #                 # if item was undefined and cur state is undefined - skip
+        #                 elif hst[key][0] == 0xFF and self.state is not None and self.state[0] == 0xFF:
+        #                     pass
+        #                 # new timestamp
+        #                 elif self.state[0] != 0xFF:
+        #                     write('ab', round(time.time()).to_bytes(4, 'little', signed=False), self.state)
+        #                 else:
+        #                     write('ab', round(time.time()).to_bytes(4, 'little', signed=False), b'undefined')
+        #             # if file hst not found
+        #             else:
+        #                 os.makedirs(hst_path, exist_ok=True)
+        #                 if self.state is not None and self.state[0] != 0xFF:
+        #                     write('wb', round(time.time()).to_bytes(4, 'little', signed=False), self.state)
+        #                 else:
+        #                     write('wb', round(time.time()).to_bytes(4, 'little', signed=False), b'undefined')
+        #     else:
+        #         return False
+        #
+        # except Exception as ex:
+        #     print(f'Error write history for {self.addr} item')
+        #     return False
 
     # .hst structure:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
     def read_history(self) -> Union[None, dict]:
-        global hst_path
-        if self.type in hst_supported_types:
-            hst_bytes = b''
-
-            if os.path.exists(hst_path + self.filename):
-                # read history
-                with open(hst_path + self.filename, 'rb') as f:
-                    hst_bytes = f.read()
-
-                if hst_bytes:
-                    tmp = list(more_itertools.split_at(hst_bytes, lambda x: x == 0xFF))
-                    while ([] in tmp):
-                        tmp.remove([])
-                    # все четные индексы - метки
-                    timestamps = [int.from_bytes(bytes(item), 'little') for item in tmp[::2]]
-                    # все нечетные индексы - сегменты истории
-                    data_segments = [bytes(item) for item in tmp[1::2]]
-
-                    # parse undefined state
-                    # for timestamp, segment in parsed_hst.values():
-                    cntr = 0
-                    for item in data_segments:
-                        if item == b'undefined':
-                            try:
-                                new_timestamp = timestamps[cntr + 1]
-                            except:
-                                new_timestamp = round(time.time())
-                            times = (new_timestamp - timestamps[cntr]) // 60
-                            data_segments[cntr] = [0xFF for i in range(times)]
-                        cntr += 1
-                    # убираем пустые
-                    while ([] in data_segments):
-                        data_segments.remove([])
-
-                    for timestamp in timestamps:
-                        if timestamp > 2000000000:
-                            print(f'read_history: timestamp error! {self.addr=} {timestamp=}')
-
-                    parsed_hst = dict(zip(timestamps, data_segments))
-                    return parsed_hst
+        # global hst_path
+        # if self.type in hst_supported_types:
+        #     hst_bytes = b''
+        #
+        #     if os.path.exists(hst_path + self.filename):
+        #         # read history
+        #         with open(hst_path + self.filename, 'rb') as f:
+        #             hst_bytes = f.read()
+        #
+        #         if hst_bytes:
+        #             tmp = list(more_itertools.split_at(hst_bytes, lambda x: x == 0xFF))
+        #             while ([] in tmp):
+        #                 tmp.remove([])
+        #             # все четные индексы - метки
+        #             timestamps = [int.from_bytes(bytes(item), 'little') for item in tmp[::2]]
+        #
+        #             # все нечетные индексы - сегменты истории
+        #             data_segments = [bytes(item) for item in tmp[1::2]]
+        #
+        #             # parse undefined state
+        #             # for timestamp, segment in parsed_hst.values():
+        #             cntr = 0
+        #             for item in data_segments:
+        #                 if b'undefined' in item:
+        #                     try:
+        #                         new_timestamp = timestamps[cntr + 1]
+        #                     except:
+        #                         new_timestamp = round(time.time())
+        #                     times = (new_timestamp - timestamps[cntr]) // 60
+        #                     data_segments[cntr] = [0xFF for i in range(times)]
+        #                 cntr += 1
+        #             # убираем пустые
+        #             while ([] in data_segments):
+        #                 data_segments.remove([])
+        #
+        #             for timestamp in timestamps:
+        #                 if timestamp > 2000000000:
+        #                     print(f'read_history: timestamp error! {self.addr=} {timestamp=}')
+        #
+        #             parsed_hst = dict(zip(timestamps, data_segments))
+        #             return parsed_hst
         return None
 
     def add_timestamp_hst(self, hst, start, end, scale):

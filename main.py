@@ -80,25 +80,24 @@ threads.append(Thread(target=ws.listener, name='ws subscribe events', daemon=Tru
 print('Thread ws listener starting...')
 threads[2].start()
 
+# def history_writer():
+#     while True:
+#         time.sleep(60)
+#         # debug
+#         # time.sleep(15)
+#         for item in logic.items.values():
+#             if item.type != 'switch' and item.state:
+#                 logic.history_events[item.addr] = item.state
+#                 item.write_history()
 
-def history_writer():
-    while True:
-        time.sleep(60)
-        # debug
-        # time.sleep(15)
-        for item in logic.items.values():
-            if item.type != 'switch' and item.state:
-                logic.history_events[item.addr] = item.state
-                item.write_history()
 
+# threads.append(Thread(target=history_writer, name='history writer', daemon=True))
+# print('Thread history writer starting...')
+# threads[3].start()
 
-threads.append(Thread(target=history_writer, name='history writer', daemon=True))
-print('Thread history writer starting...')
-threads[3].start()
-
-threads.append(Thread(target=udp.run, args=[shClient.initClientID], name='udp sniffer', daemon=True))
-print('Thread udp sniffer starting...')
-threads[4].start()
+# threads.append(Thread(target=udp.run, args=[shClient.initClientID], name='udp sniffer', daemon=True))
+# print('Thread udp sniffer starting...')
+# threads[4].start()
 
 # проверяем раз в 5 сек живы ли потоки, если нет, то перезапускаем нужный
 while True:
@@ -127,20 +126,20 @@ while True:
             threads[2].start()
         except:
             print('Error start ws subscribe handler')
-    if not threads[3].is_alive():
-        try:
-            threads[3] = Thread(target=history_writer, name='history writer', daemon=True)
-            print('Thread history writer starting...')
-            threads[3].start()
-        except:
-            print('Error start history writer')
-    if not threads[4].is_alive():
-        try:
-            threads[4] = Thread(target=udp.run, name='udp sniffer', daemon=True)
-            print('Thread udp sniffer starting...')
-            threads[4].start()
-        except:
-            print('Error start udp sniffer')
+    # if not threads[3].is_alive():
+    #     try:
+    #         threads[3] = Thread(target=history_writer, name='history writer', daemon=True)
+    #         print('Thread history writer starting...')
+    #         threads[3].start()
+    #     except:
+    #         print('Error start history writer')
+    # if not threads[4].is_alive():
+    #     try:
+    #         threads[4] = Thread(target=udp.run, name='udp sniffer', daemon=True)
+    #         print('Thread udp sniffer starting...')
+    #         threads[4].start()
+    #     except:
+    #         print('Error start udp sniffer')
     # проверка обновилась ли логика
     try:
         logic.update()
