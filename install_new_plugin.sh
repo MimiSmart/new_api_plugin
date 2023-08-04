@@ -45,6 +45,7 @@ wget https://github.com/MimiSmart/new_api_plugin/archive/refs/heads/main.zip -O 
 unzip /home/sh2/exe/new_api_plugin.zip -d /home/sh2/exe/
 mv /home/sh2/exe/new_api_plugin-main /home/sh2/exe/new_api_plugin
 
+chmod +x /home/sh2/exe/new_api_plugin/main.py
 
 # Проверяем успешно ли установлен плагин
 if [ -d "/home/sh2/exe/new_api_plugin" ]; then
