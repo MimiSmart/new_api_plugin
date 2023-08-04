@@ -57,7 +57,7 @@ fi
 
 # Меняем порт сервера
 echo "Меняю порт сервера для приложения на 22522"
-wget https://raw.githubusercontent.com/MimiSmart/new_api_plugin/blob/main/def-args.txt?raw=true -O /home/sh2/def-args.txt
+wget https://raw.githubusercontent.com/MimiSmart/new_api_plugin/main/def-args.txt?raw=true -O /home/sh2/def-args.txt
 
 
 # Обноляем файл настроек MimiSetup. 
