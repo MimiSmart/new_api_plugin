@@ -19,7 +19,7 @@ required_debian_version="10.0"
 current_debian_version=$(cat /etc/debian_version)
 
 if [[ $required_debian_version == $current_debian_version || $current_debian_version > $required_debian_version ]]; then
-    echo "Версия Debian ($required_debian_version) совпадает с текущей версией ($current_debian_version)"
+    echo "Версия Debian ($required_debian_version) подходит для установки. Текущая версия ($current_debian_version)"
 else
     echo "Ошибка: Версия Debian ($required_debian_version) не совпадает с текущей версией ($current_debian_version)"
     exit 1
@@ -116,5 +116,5 @@ read -p "Вы хотите активировать таблицу IPTABLES? (y/
 if [[ $choice == "y" || $choice == "Y" ]]; then
     wget -O tablesOn.sh "https://raw.githubusercontent.com/MimiSmart/mimi-server/main/tablesOn.sh?raw=true" && chmod +x tablesOn.sh && ./tablesOn
 else
-    echo "Обновление сервера успешно ввыполнено. Мои поздравления."
+    exit 1
 fi
