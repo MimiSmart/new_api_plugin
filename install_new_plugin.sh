@@ -18,7 +18,7 @@ echo "Проверяем версию ОС"
 required_debian_version="10.0"
 current_debian_version=$(cat /etc/debian_version)
 
-if [[ $current_debian_version == $required_debian_version ]]; then
+if [[ $current_debian_version == $required_debian_version || $current_debian_version > $required_debian_version ]]; then
     echo "Версия Debian ($required_debian_version) совпадает с текущей версией ($current_debian_version)"
 else
     echo "Ошибка: Версия Debian ($required_debian_version) не совпадает с текущей версией ($current_debian_version)"
