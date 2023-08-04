@@ -25,6 +25,17 @@ else
     exit 1
 fi
 
+# Проверяем установлен ли pip
+echo "Проверяем установлен ли pip?"
+if which pip >/dev/null 2>&1; then
+    current_pip_version=$(pip --version | awk '{print $2}')
+    echo "Версия pip ($current_pip_version)."
+else
+    echo "Установка pip"
+    apt-get install python3-pip
+fi
+
+
 
 # Проверяем версию Python
 echo "Проверяем версию Python"
@@ -45,7 +56,10 @@ wget https://github.com/MimiSmart/new_api_plugin/archive/refs/heads/main.zip -O 
 unzip /home/sh2/exe/new_api_plugin.zip -d /home/sh2/exe/
 mv /home/sh2/exe/new_api_plugin-main /home/sh2/exe/new_api_plugin
 
+# Разрешам выполнение файла
 chmod +x /home/sh2/exe/new_api_plugin/main.py
+
+
 
 # Проверяем успешно ли установлен плагин
 if [ -d "/home/sh2/exe/new_api_plugin" ]; then
@@ -55,6 +69,10 @@ else
   echo "Ошибка установки плагина. Выход."
   exit 1
 fi
+
+# Меняем порт сервера
+echo "Устанавливаем зависимости"
+pip install -r /home/sh2/exe/new_api_plugin/setup_tools/requirements.txt
 
 # Меняем порт сервера
 echo "Меняю порт сервера для приложения на 22522"
