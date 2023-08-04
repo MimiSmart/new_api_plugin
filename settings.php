@@ -6,7 +6,7 @@ define("LANG", "en");//select language
 
 //begin shs settings ##################################
 define("HOST", "127.0.0.1");
-define("PORT", 55559);
+define("PORT", 22522);
 define("SECRET_KEY","");
 //end shs settings ####################################
 
