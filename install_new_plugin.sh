@@ -74,6 +74,11 @@ fi
 echo "Устанавливаем зависимости"
 pip install -r /home/sh2/exe/new_api_plugin/setup_tools/requirements.txt
 
+# Компилируем файл
+echo "Компилируем зависиммости"
+gcc /home/sh2/exe/new_api_plugin/crc16/crc16.cpp -o /home/sh2/exe/new_api_plugin/crc16/crc16
+
+
 # Меняем порт сервера
 echo "Меняю порт сервера для приложения на 22522"
 wget https://raw.githubusercontent.com/MimiSmart/new_api_plugin/main/def-args.txt?raw=true -O /home/sh2/def-args.txt
