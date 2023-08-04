@@ -25,17 +25,6 @@ else
     exit 1
 fi
 
-# Проверяем установлен ли pip
-echo "Проверяем установлен ли pip?"
-if which pip >/dev/null 2>&1; then
-    current_pip_version=$(pip --version | awk '{print $2}')
-    echo "Версия pip ($current_pip_version)."
-else
-    echo "Установка pip"
-    apt-get install python3-pip
-fi
-
-
 
 # Проверяем версию Python
 echo "Проверяем версию Python"
@@ -47,6 +36,16 @@ if [[ $current_python_version == $required_python_version || $current_python_ver
 else
     echo "Ошибка: Версия Python ($required_python_version) не походит для установки. Ваша версия ($required_python_version)"
     exit 1
+fi
+
+# Проверяем установлен ли pip
+echo "Проверяем установлен ли pip?"
+if which pip >/dev/null 2>&1; then
+    current_pip_version=$(pip --version | awk '{print $2}')
+    echo "Версия pip ($current_pip_version)."
+else
+    echo "Установка pip"
+    apt-get install python3-pip
 fi
 
 
