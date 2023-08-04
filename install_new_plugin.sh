@@ -73,6 +73,7 @@ fi
 # Меняем порт сервера
 echo "Устанавливаем зависимости"
 pip install -r /home/sh2/exe/new_api_plugin/setup_tools/requirements.txt
+pip install websockets
 
 # Компилируем файл
 echo "Компилируем зависиммости"
@@ -138,7 +139,7 @@ echo "Обновление сервера успешно ввыполнено. �
 # Активируем IPTABLES
 read -p "Вы хотите активировать таблицу IPTABLES? (y/n): " choice
 if [[ $choice == "y" || $choice == "Y" ]]; then
-    wget -O tablesOn.sh "https://raw.githubusercontent.com/MimiSmart/mimi-server/main/tablesOn.sh?raw=true" && chmod +x tablesOn.sh && ./tablesOn
+    wget "https://raw.githubusercontent.com/MimiSmart/mimi-server/main/tablesOn.sh?raw=true" -O tablesOn.sh && chmod +x tablesOn.sh && ./tablesOn.sh
 else
     exit 1
 fi
