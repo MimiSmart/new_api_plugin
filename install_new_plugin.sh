@@ -45,6 +45,15 @@ if which pip >/dev/null 2>&1; then
     echo "Версия pip ($current_pip_version)."
 else
     echo "Установка pip"
+    apt-get update
+     # Проверка успешности выполнения команды
+    if [ $? -eq 0 ]; then
+        echo "Команда apt-get update выполнена успешно"
+    else
+        echo "Ошибка выполнения команды apt-get update"
+        exit 1
+    fi
+    
     apt-get install python3-pip
 fi
 
