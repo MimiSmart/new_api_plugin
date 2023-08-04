@@ -32,7 +32,7 @@ required_python_version="3.9"
 current_python_version=$(python3 -V 2>&1 | awk '{print $2}')
 
 if [[ $current_python_version == $required_python_version || $current_python_version > $required_python_version  ]]; then
-    echo "Версия Python ($current_python_version) походит для установки. Требуемая версия должна быть не ниже ($current_python_version)"
+    echo "Версия Python ($current_python_version) походит для установки. Требуемая версия должна быть не ниже ($required_python_version)"
 else
     echo "Ошибка: Версия Python ($required_python_version) не походит для установки. Ваша версия ($required_python_version)"
     exit 1
@@ -41,8 +41,8 @@ fi
 
 # Устанавливаем новый плагин в папку /home/sh2/exe
 echo "Устанавливаем плагин API"
-wget https://github.com/MimiSmart/new_api_plugin/archive/refs/heads/main.zip -O /home/api/new_api_plugin.zip
-unzip /home/api/new_api_plugin.zip -d /home/api/
+wget https://github.com/MimiSmart/new_api_plugin/archive/refs/heads/main.zip -O /home/sh2/exe/new_api_plugin.zip
+unzip /home/sh2/exe/new_api_plugin.zip -d /home/sh2/exe/
 mv /home/sh2/exe/new_api_plugin-main /home/sh2/exe/new_api_plugin
 
 
