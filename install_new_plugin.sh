@@ -50,7 +50,7 @@ chmod +x /home/sh2/exe/new_api_plugin/main.py
 # Проверяем успешно ли установлен плагин
 if [ -d "/home/sh2/exe/new_api_plugin" ]; then
   echo "Плагин успешно установлен"
-  rm /home/api/new_api_plugin.zip
+  rm /home/sh2/exe/new_api_plugin.zip
 else
   echo "Ошибка установки плагина. Выход."
   exit 1
