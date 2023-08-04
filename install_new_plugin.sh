@@ -13,11 +13,10 @@ else
     exit 1
 fi
 
-
 # Проверяем версию ОС
 echo "Проверяем версию ОС"
 required_debian_version="10.0"
-current_debian_version=$(lsb_release -rs)
+current_debian_version=$(cat /etc/debian_version)
 
 if [[ $current_debian_version == $required_debian_version ]]; then
     echo "Версия Debian ($required_debian_version) совпадает с текущей версией ($current_debian_version)"
