@@ -1,0 +1,13 @@
+#!/usr/bin/bash
+# compile
+python3.9 setup_cython.py build_ext --inplace
+#python3.11 setup_cython.py build_ext --inplace
+
+# bundle
+pyinstaller --onefile --distpath . --name "new_api_plugin" --add-binary="api_models.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="blinds.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="conditioner.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="dimmer.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="heating.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="lamp.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="leak.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="rgb.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="sensor.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="item.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="logic.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="rest.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="shclient.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="timeit.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="ws.cpython-39-arm-linux-gnueabihf.so:/" --add-binary="main.cpython-39-arm-linux-gnueabihf.so:/" --hidden-import="uvicorn" --hidden-import="fastapi" --hidden-import="xml.etree.cElementTree" --hidden-import="Cryptodome.Cipher.AES" run.py
+#pyinstaller --onefile --distpath . --name "new_api_plugin" --add-binary="api_models.cpython-311-x86_64-linux-gnu.so:/" --add-binary="items.cpython-311-x86_64-linux-gnu.so:/" --add-binary="item.cpython-311-x86_64-linux-gnu.so:/" --add-binary="logic.cpython-311-x86_64-linux-gnu.so:/" --add-binary="rest.cpython-311-x86_64-linux-gnu.so:/" --add-binary="shclient.cpython-311-x86_64-linux-gnu.so:/" --add-binary="timeit.cpython-311-x86_64-linux-gnu.so:/" --add-binary="ws.cpython-311-x86_64-linux-gnu.so:/" --add-binary="main.cpython-311-x86_64-linux-gnu.so:/" --hidden-import="uvicorn" --hidden-import="fastapi" --hidden-import="json" run.py
+
+# clean
+#rm -rf ./build
+#rm -rf ./build_cythonize
+#rm *.so

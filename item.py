@@ -1,10 +1,23 @@
-import os
 import time
 from typing import Union
 
-import more_itertools
+from items import blinds, conditioner, dimmer, heating, lamp, leak, rgb, sensor
 
-from items import *
+# for debug
+
+# for compiled version
+
+# import blinds
+# import conditioner
+# import dimmer
+# import heating
+# import lamp
+# import leak
+# import rgb
+# import sensor
+
+# import more_itertools
+# from timeit import timeit
 
 # size states in old history:
 # 'lamp': 1,
