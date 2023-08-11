@@ -5,3 +5,4 @@ pydantic~=1.10.7
 requests~=2.28.2
 pycryptodomex
 more_itertools
+websockets
