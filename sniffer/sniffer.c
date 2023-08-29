@@ -64,8 +64,7 @@ static PyObject* run(PyObject* pSelf, PyObject* pArgs, PyObject* pKywdArgs){
             printf("Recvfrom error , failed to get packets\n");
             return Py_BuildValue("i",1);
         }
-        //Now process the packet
-
+        //-------------- Get packet data ----------------
         unsigned short iphdrlen;
         struct iphdr *iph = (struct iphdr *)(buffer +  sizeof(struct ethhdr));
         iphdrlen = iph->ihl*4;
@@ -92,7 +91,7 @@ static PyObject* run(PyObject* pSelf, PyObject* pArgs, PyObject* pKywdArgs){
         char* src_ip = malloc(20);
         strcpy(dest_ip,inet_ntoa(dest.sin_addr));
         strcpy(src_ip,inet_ntoa(source.sin_addr));
-
+        //---------------------------------------------------------
         //udp packet protocol==17
         if (iph->protocol == 17){
 //            printf( "\n\n***********************UDP Packet*************************\n\n");
@@ -160,6 +159,7 @@ static PyObject* run(PyObject* pSelf, PyObject* pArgs, PyObject* pKywdArgs){
             PyObject* pKywdArgs2 = NULL ;
             PyObject* pResult = PyObject_Call( pCallback, pArgs2, pKywdArgs2 ) ;
 
+            // free py objects
             Py_DECREF( pArgs2 ) ;
             Py_XDECREF( pKywdArgs2 ) ;
             Py_DECREF( pResult ) ;
