@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 import json
 import subprocess
+import time
 from collections import defaultdict
 from typing import Dict
 from xml.etree import cElementTree as ET
 
+import tools
 from item import Item
+from mytimer import timeit
 
 
 class Logic:
@@ -38,8 +41,9 @@ class Logic:
     # обеспечивает запись и чтение logic.xml по очереди
     write_flag = False
 
-    def __init__(self, path_logic):
-        self.path_logic = path_logic
+    @timeit
+    def __init__(self, logic_path):
+        self.path_logic = logic_path
         self.read_logic()
         self.crc16 = self.checksum()
         self.obj_logic = self.get_dict()
@@ -57,9 +61,10 @@ class Logic:
     def get_xml(self):
         return self.xml_logic.replace(b'#amp', b'&')
 
-    def get_dict(self):
+    def get_dict(self, xml_logic=''):
         if not self.xml_logic: self.read_logic()
-        e = ET.XML(self.xml_logic.decode())
+        if not xml_logic: xml_logic = self.xml_logic
+        e = ET.XML(xml_logic.decode())
         # self.obj_logic = self._xml2dict(e)
         return self._xml2dict(e)
 
@@ -170,6 +175,7 @@ class Logic:
                 f.write((line + "\n").encode('utf-8'))
         self.write_flag = False
 
+    @timeit
     def set_xml(self, xml):
         xml = xml.encode('utf-8')
         with open(self.path_logic, 'wb') as f:
@@ -190,6 +196,7 @@ class Logic:
     #   Input: xml.etree.cElementTree.Element
     #   Output: dict
     # -----------------
+    @timeit
     def _xml2dict(self, tree):
         my_dict = {tree.tag: {} if tree.attrib else None}
         child = list(tree)
@@ -224,6 +231,7 @@ class Logic:
     #   Input: dict,str,str,str
     #   Output: list or None
     # -----------------
+    @timeit
     def _find_path_2_item(self, data, tag, g_key, g_value):
         keys = []
         if type(data) is dict:
@@ -277,6 +285,7 @@ class Logic:
                 cntr += 1
         return keys
 
+    @timeit
     def _dict2xml(self, my_dict):
         def _to_etree(my_dict, root):
             if not my_dict:
@@ -315,14 +324,15 @@ class Logic:
         reparsed = minidom.parseString(rough_string)
         return reparsed.toprettyxml(indent="".join(["\t"]))
 
+    @timeit
     def checksum(self, data=None):
         # if data is None - calculate checksum for logic.xml file
         crc = 0
         if data is None:
-            buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 file ' + self.path_logic, shell=True,
+            buffer = subprocess.run(f'{tools.home_path}/crc16/crc16 file {self.path_logic}', shell=True,
                                     capture_output=True)
         else:
-            buffer = subprocess.run('/home/sh2/exe/new_api_plugin/crc16/crc16 string \'' + data + '\'', shell=True,
+            buffer = subprocess.run(f'{tools.home_path}/crc16/crc16 string \'{data}\'', shell=True,
                                     capture_output=True)
         crc = buffer.stdout.decode('utf-8')
         crc = int(crc, 16)
@@ -330,6 +340,7 @@ class Logic:
 
         return crc
 
+    @timeit
     def update(self):
         if not self.update_flag:
             self.read_logic()
@@ -352,6 +363,7 @@ class Logic:
                         self.items[addr].update = True
                         self.items[addr].json_obj = item
 
+    @timeit
     def find_all_items(self, data=None, tag='item'):
         if data is None:
             data = self.obj_logic
@@ -364,23 +376,18 @@ class Logic:
                     if type(data[tag]) is list:
                         for item in data[tag]:
                             items.append(item)
-                            tmp_items = self.find_all_items(item, tag)
-                            for tmp_item in tmp_items:
-                                items.append(tmp_item)
+                            items.extend(self.find_all_items(item, tag))
                     else:
                         items.append(data[tag])
                 # если тэга на этом уровне не нашли, то пытаемся поискать внутри data[key]
                 else:
-                    tmp_items = self.find_all_items(data[key], tag)
-                    for tmp_item in tmp_items:
-                        items.append(tmp_item)
+                    items.extend(self.find_all_items(data[key], tag))
         # если нам изначально пришел не dict, а list (это должно происходить только в процессе рекурсии)
         elif type(data) is list:
             for part in data:
                 # то ищем внутри каждого элемента
-                tmp_items = self.find_all_items(part, tag)
-                for tmp_item in tmp_items:
-                    items.append(tmp_item)
+                items.extend(self.find_all_items(part, tag))
+
         return [i for n, i in enumerate(items) if i not in items[:n]]  # убираем дубликаты
 
     def get_all_states(self):
