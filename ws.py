@@ -5,10 +5,15 @@ import time
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 
+import tools
+from auth import Auth
 from logic import Logic
 
 subscribes = list()
 logic: Logic = None
+
+auth = Auth()
+config = tools.read_config()
 
 
 def init_logic(_logic: Logic):
@@ -62,29 +67,33 @@ def set_state(args):
                    range(0, len(args['state']), 2)]  # разбиваем по байтам (2 символа)
         if int(args['addr'].split(':')[0]) < 1000:
             if logic.items[args['addr']].type == 'valve-heating':
-                # manual off
-                if tmp[0] == 0:
+                # manual mode
+                if tmp[0] in [0, 1]:
                     # set manual mode for heating
                     logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
-                    # set 0 for heating
-                    logic.set_queue.append((args['addr'], [0]))
-                # manual on
-                elif tmp[0] == 1:
-                    # set manual mode for heating
-                    logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
-                    # set 1 for heating
-                    logic.set_queue.append((args['addr'], [1]))
+                    # set state for heating
+                    logic.set_queue.append((args['addr'], [tmp[0]]))
                 # always off
                 elif tmp[0] == 2:
                     # set always-off mode for heating
                     logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-1']))
-                # auto and others automations (server2.0)
+                # auto
+                elif tmp[0] == 3:
+                    # write Auto mode to logic.xml, if not exist
+                    if logic.write_automation(args["addr"]):
+                        # set state with wait upd logic on server 2.0
+                        logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0Auto'], True))
+                    else:
+                        logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0Auto']))
+                    # set temperature for heating. if 0xFF, then save old temperature
+                    if tmp[1] != 0xFF:
+                        logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
+                # others automations (server2.0)
                 else:
                     logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:{tmp[0] - 3}']))
                     # set temperature for heating. if 0xFF, then save old temperature
                     if tmp[1] != 0xFF:
                         logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
-
             else:
                 logic.set_queue.append((args['addr'], tmp))
 
@@ -154,6 +163,8 @@ class SubscribeWebsocket:
 
     # при подписке на элементы сразу отправляются их текущие статусы
     sent_init_status: bool
+
+    authorized: bool = False
 
     def __init__(self, websocket: WebSocket,
                  event_logic: dict = None,
@@ -430,8 +441,27 @@ def find_index(websocket):
     return None
 
 
+async def authorize(args):
+    global subscribes
+    result = await auth.get_current_user(args['access_token'])
+    if result:
+        subscribes[args['index']].authorized = True
+        return {'type': 'response', 'message': 'Authorize success!'}
+    else:
+        return {'type': 'error', 'message': 'Invalid token'}
+
+
+def get_token(args):
+    result = auth.authenticate_user(args['password'])
+    if result:
+        return result
+    else:
+        return {'type': 'error', 'message': 'Username or password is incorrect'}
+
+
 async def endpoint(websocket: WebSocket):
-    global subscribes, commands
+    global subscribes, commands, config
+
     # добавление нового коннекшна
     subscribes.append(SubscribeWebsocket(websocket))
     await websocket.accept()
@@ -444,25 +474,37 @@ async def endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             try:
                 data = json.loads(data)
-            except:
-                reply = {'type': 'error', 'message': 'Invalid json!'}
+                print(f"Websocket received: {data}")
 
-            print(f"Websocket received: {data}")
-
-            if not reply:
                 # check if exists command
                 if data['command'] in commands:
-
-                    if data['command'] == 'subscribe' or data['command'] == 'unsubscribe':
-                        reply = subscriber(find_index(websocket), data)
-                    else:
-                        if data['command'] == 'get_history':
-                            data['client'] = websocket
+                    # авторизация по вебсокету
+                    if data['command'] == 'auth' and config['auth']:
+                        data['index'] = find_index(websocket)
+                        cmd = data['command']
+                        data.pop('command')
+                        reply = await authorize(data)
+                    elif data['command'] == 'get_token' and config['auth']:
                         cmd = data['command']
                         data.pop('command')
                         reply = commands[cmd](data)
+
+
+                    elif subscribes[find_index(websocket)].authorized or not config['auth']:  # debug config auth
+                        if data['command'] == 'subscribe' or data['command'] == 'unsubscribe':
+                            reply = subscriber(find_index(websocket), data)
+                        else:
+                            if data['command'] == 'get_history':
+                                data['client'] = websocket
+                            cmd = data['command']
+                            data.pop('command')
+                            reply = commands[cmd](data)
+                    else:
+                        reply = {'type': 'error', 'message': 'Not authorized!'}
                 else:
                     reply = {'type': 'error', 'message': 'Command not found!'}
+            except:
+                reply = {'type': 'error', 'message': 'Invalid json!'}
 
             try:
                 if reply:
@@ -624,5 +666,8 @@ commands = {
     "get_history": get_history,
     "send_message": send_message,
     "subscribe": subscriber,
-    "unsubscribe": subscriber
+    "unsubscribe": subscriber,
+    "auth": authorize,
+    "get_token": get_token
+
 }

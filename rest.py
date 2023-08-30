@@ -1,20 +1,20 @@
-# app.py
 import json
 from typing import Annotated
 
-from fastapi import FastAPI, Body, Response
+from fastapi import FastAPI, Body, Response, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 
-from api_models import *
+from api_models import SetState, SetLogic, GetState, SetItem, GetHistory, SendMessage
+from auth import Auth
 from logic import Logic
-
-home_path = '/home/sh2/exe/new_api_plugin/'  # RELEASE
-# home_path = './'  # DEBUG
 
 logic: Logic = None
 app = FastAPI(title="MimiSmart API")
 
+auth = Auth()
 
-def init_logic(_logic: Logic):
+
+def __init__(_logic: Logic):
     global logic
     logic = _logic
 
@@ -29,17 +29,17 @@ def convert2response(msg):
 
 
 @app.get("/logic/get/xml", tags=['rest api'], summary="Get logic in xml")
-def get_logic_xml():
+def get_logic_xml(current_user: Annotated[auth.User, Depends(auth.get_current_user)]):
     return convert2response(logic.get_xml())
 
 
 @app.get("/logic/get/obj", tags=['rest api'], summary="Get logic in json")
-def get_logic_obj():
+def get_logic_obj(current_user: Annotated[auth.User, Depends(auth.get_current_user)]):
     return convert2response(logic.get_dict())
 
 
 @app.post("/logic/set/xml", tags=['rest api'], summary="Write logic.xml")
-def set_logic_xml(item: SetLogic):
+def set_logic_xml(current_user: Annotated[auth.User, Depends(auth.get_current_user)], item: SetLogic):
     return convert2response(
         {'type': 'response', 'message': 'Write successfully'}
         if logic.set_xml(item.xml) else
@@ -50,12 +50,12 @@ def set_logic_xml(item: SetLogic):
 @app.get("/item/get_attributes/{addr}", tags=['rest api'], response_model=dict,
          response_description='Return dictionary of item attributes',
          summary="Get item if json format")
-def get_item(addr: str):
+def get_item(current_user: Annotated[auth.User, Depends(auth.get_current_user)], addr: str):
     return convert2response(logic.get_item(addr))
 
 
 @app.post("/item/set_attributes", tags=['rest api'], summary="Write/append/remove item")
-def set_item(item: Annotated[SetItem, Body(
+def set_item(current_user: Annotated[auth.User, Depends(auth.get_current_user)], item: Annotated[SetItem, Body(
     examples={
         "write": {"value": {"type": "write", "tag": "item", "area": "System",
                             "data": {"addr": "999:99", "type": "lamp", "name": "Example lamp"}, }},
@@ -66,13 +66,13 @@ def set_item(item: Annotated[SetItem, Body(
 
 @app.delete("/item/delete/{addr}", tags=['rest api'], summary="Delete item")
 # def del_item(item: Annotated[DelItem, Body(example={"addr": "999:99"}, ),], ):
-def del_item(addr: str):
+def del_item(current_user: Annotated[auth.User, Depends(auth.get_current_user)], addr: str):
     return convert2response(logic.del_item(addr))
 
 
 @app.post("/item/get_state/", tags=['rest api'], response_description='Return string of bytes state',
           summary="Get current state of item")
-def get_state(item: GetState):
+def get_state(current_user: Annotated[auth.User, Depends(auth.get_current_user)], item: GetState):
     args = item.addr
     if isinstance(args, str):
         args = [args]
@@ -85,12 +85,12 @@ def get_state(item: GetState):
 
 @app.get("/item/get_all_states/", tags=['rest api'], response_description='Return string of bytes state',
          summary="Get all current states of item")
-def get_all_states():
+def get_all_states(current_user: Annotated[auth.User, Depends(auth.get_current_user)]):
     return convert2response(logic.get_all_states())
 
 
 @app.post("/item/set_state/", tags=['rest api'], summary="Set state on item")
-def set_state(item: SetState):
+def set_state(current_user: Annotated[auth.User, Depends(auth.get_current_user)], item: SetState):
     try:
         # обработка строк, для set_state
         try:
@@ -138,7 +138,7 @@ def set_state(item: SetState):
 
 
 @app.post("/item/get_history/", tags=['rest api'], summary="Set state on item")
-def get_history(args: GetHistory):
+def get_history(current_user: Annotated[auth.User, Depends(auth.get_current_user)], args: GetHistory):
     # если история есть в .hst2 то берем оттуда
     if args.addr not in logic.items:
         return convert2response({"type": "error", "message": "Item not found"})
@@ -171,7 +171,7 @@ def get_history(args: GetHistory):
 
 
 @app.post("/item/send_message/", tags=['rest api'], summary="Send push message")
-def send_message(args: SendMessage):
+def send_message(current_user: Annotated[auth.User, Depends(auth.get_current_user)], args: SendMessage):
     try:
         id, subid = args.addr.split(':')
         logic.push_requests.append(
@@ -179,3 +179,17 @@ def send_message(args: SendMessage):
         return convert2response({"type": "response", "message": 'Push-message send successfully'})
     except:
         return convert2response({"type": "error", "message": "Invalid data"})
+
+
+@app.post("/token", response_model=auth.Token)
+async def login_for_access_token(
+        form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
+):
+    result = auth.authenticate_user(form_data.password)
+    if not result or form_data.username != 'mimismart':
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return result

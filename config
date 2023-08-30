@@ -1,7 +1,8 @@
 {
-    "logic_path": "/home/sh2/logic.xml",
-    "local_ip": "0.0.0.0",
-    "port": 55555,
-    "udp_port": 22522
+  "sh2_path": "/home/sh2/",
+  "hst_path": "/home/sh2/exe/new_api_plugin/history/",
+  "local_ip": "0.0.0.0",
+  "port": 55558,
+  "udp_port": 55555,
+  "auth": true
 }
-
