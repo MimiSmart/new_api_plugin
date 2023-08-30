@@ -1,4 +1,3 @@
-import os
 import socket
 import struct
 import time
@@ -7,21 +6,15 @@ from Cryptodome.Cipher import AES
 
 from logic import Logic
 
-LogPath = '/home/sh2/logs/log.txt'
-LogicPath = '/home/sh2/logic.xml'
-
 
 class SHClient:
     host = ""
     port = ""
-    aeskey = ""
+    key = ""
     initClientDefValue = 0x7ef
     initClientID = 0
     logicXml = ""
-    xmlFile = ""
-    allowReadXmlLogic = True
     allowRetraslateUDP = True
-    keysFile = "/home/sh2/keys.txt"
 
     connectionTimeOut = 5  # seconds
     connectionResource = None
@@ -30,15 +23,13 @@ class SHClient:
     runSuccess = False
 
     logic: Logic
+    waiting_states = list()
 
-    def init_logic(self, _logic):
-        self.logic = _logic
-
-    def __init__(self, host="", port="", aeskey="", xmlfile=""):
-        if host != "": self.host = host
-        if port != "": self.port = port
-        self.aeskey = aeskey
-        self.xmlFile = xmlfile
+    def __init__(self, host, port, key, logic):
+        self.host = host
+        self.port = port
+        self.key = key
+        self.logic = logic
 
     def run(self):
         self.connectToServer()
@@ -50,17 +41,8 @@ class SHClient:
             return False
 
         if self.allowRetraslateUDP:
-            if self.allowReadXmlLogic:
-                if not self.readXmlLogic():
-                    return False
-                if b"</smart-house>" not in self.logicXml:
-                    print("Could not get xml logic from smart-house server")
-                    return False
-            elif self.xmlFile != "" and os.path.exists(self.xmlFile):
-                if not self.readXmlLogic():
-                    return False
-                # with open(self.xmlFile) as f:
-                #     self.logicXml = f.read()
+            if not self.readXmlLogic():
+                return False
         if self.logicXml == "":
             self.logicXml = "<?xml version='1+0' encoding='UTF-8'?><smart-house name=\"Умный дом\"></smart-house>"
 
@@ -68,7 +50,6 @@ class SHClient:
         self.runSuccess = True
         return True
 
-    # ready
     def connectToServer(self):
         try:
             self.connectionResource = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -83,7 +64,7 @@ class SHClient:
             if data is None:
                 return 0
             else:
-                cipher = AES.new(self.aeskey.encode('utf-8'), AES.MODE_ECB)
+                cipher = AES.new(self.key.encode('utf-8'), AES.MODE_ECB)
                 encrypted = cipher.encrypt(data)
                 self.connectionResource.send(encrypted)
 
@@ -133,6 +114,7 @@ class SHClient:
     # PD=1 - start packet
     # PD=30 - synchro time packet
     # PD=15 - ping module->server with states
+
     def packData(self, id, subid, pd, length, value=[0, 0, 0, 0, 0, 0]):
         s = struct.pack("2H4BH", self.initClientID, id, pd, 0, 0, subid, length)
         if length > 0:
@@ -154,15 +136,19 @@ class SHClient:
 
             # тут освобождается очередь сетстатусов
             while self.logic.set_queue:
-                addr, state = self.logic.set_queue[0]
+                try:
+                    addr, state = self.logic.set_queue[0]
+
+                    # для диммера устанавливаем время изменения яркости 0 секунд, если в запросе отсутствует
+                    if (int(addr.split(':')[0]) < 1000 and self.logic.items[addr].type in ['dimer-lamp', 'dimmer-lamp']
+                            and len(state) == 2):
+                        state += b'\0'
+
+                    self.setStatus(addr, state)
+                except:
+                    addr, state, wait = self.logic.set_queue[0]
+                    self.waiting_states.append((addr, state))
                 self.logic.set_queue.pop(0)
-
-                # для диммера устанавливаем время изменения яркости 0 секунд, если в запросе отсутствует
-                if int(addr.split(':')[0]) < 1000 and (self.logic.items[addr].type == 'dimer-lamp' or self.logic.items[
-                    addr].type == 'dimmer-lamp') and len(state) == 2:
-                    state += b'\0'
-
-                self.setStatus(addr, state)
 
             # тут отправляются пуши
             for push in self.logic.push_requests:
@@ -191,8 +177,36 @@ class SHClient:
 
                 if shHead != "" and unpackData[0] == 6:
                     continue
+
                 if shHead in ["shcxml", "messag"]:
                     tmp = self.fread(unpackData[0] - 6)
+                    if shHead == "shcxml":
+
+                        tmp_obj = self.logic.get_dict(tmp[5:])
+                        tmp_items = dict()
+                        for item in self.logic.find_all_items(data=tmp_obj):
+                            tmp_items[item['addr']] = item
+
+                        # проверяем каждый ожидающий пакет, если адресат обновился в логике - отправляем сет статус
+                        cntr = 0
+                        for addr, state in self.waiting_states:
+                            if int(addr.split(':')[0]) >= 1000:
+                                tmp_addr = ''.join(map(chr, state)).split('\x00')[0]
+                                # если логика обновилась - отправляем статус
+                                if self.logic.items[tmp_addr].json_obj != tmp_items[tmp_addr]:
+                                    self.setStatus(addr, state)
+                                    self.waiting_states.pop(cntr)
+                                    cntr -= 1
+                            # проверяем изменения
+                            elif self.logic.items[addr].json_obj != tmp_items[addr]:
+                                # для диммера устанавливаем время изменения яркости 0 секунд, если в запросе отсутствует
+                                if self.logic.items[addr].type in ['dimer-lamp', 'dimmer-lamp'] and len(state) == 2:
+                                    state += b'\0'
+                                self.setStatus(addr, state)
+                                self.waiting_states.pop(cntr)
+                                cntr -= 1
+                            cntr += 1
+
                     if tmp is None:
                         return 0
                     else:
@@ -255,8 +269,6 @@ class SHClient:
             xml += "<get-shc retranslate-udp=\"yes\" mac-id=\"6234567890123456\"/>\n"
         else:
             xml += "<get-shc mac-id=\"6234567890123456\"/>\n"
-        # xml += '<get-shc keep-push="yes" crc32="0xD74D316D" mac-id="d66526a68c9718e9" current-id="45" retranslate-udp-optim="yes" remote-connection="yes" os-type="1" os-ver="33.0" send-ping-to="20" set-ping-to="30" resend="get-shc" srv-serial="61a4cce3" need-ip-ids="yes"/>'+"\n"
-
         xml += "</smart-house-commands>\n"
         xmlsize = len(xml)
         data = struct.pack("L", xmlsize) + xml.encode('utf-8')
@@ -304,6 +316,7 @@ class SHClient:
 
     # addr - str "id:subid". ex.: "999:99"
     # range_date - list of 2 timestamps, ex.: [1683800000,1683800001]
+
     def getDeviceHistory(self, addr, range_time, scale):
         id, subid = addr.split(':')
 

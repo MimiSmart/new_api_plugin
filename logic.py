@@ -395,3 +395,39 @@ class Logic:
         for addr, item in self.items.items():
             copy[addr] = item.get_state()
         return {'type': 'response', 'data': copy}
+
+    # write Auto mode for heating
+    def write_automation(self, addr):
+        self.update()
+
+        obj = self.items[addr].json_obj
+        if 'automation' in obj:
+            # если есть список автоматизаций
+            if isinstance(obj['automation'], list):
+                cntr = 0
+                while cntr < len(obj['automation']):
+                    if obj['automation'][cntr]['name'] == 'Auto':
+                        # если Авто стоит первый в списке - ничего не нужно делать
+                        if not cntr:
+                            return False
+                        # если Авто стоит не на первом месте - удаляем
+                        else:
+                            obj['automation'].pop(cntr)
+                            cntr -= 1
+                    cntr += 1
+                # записываем режим Авто первым в списке
+                tmp = obj['automation']
+                obj['automation'] = [{'name': 'Auto', 'temperature-level': '21'}]
+                obj['automation'].extend(tmp)
+            # если automation записан как аттрибут
+            else:
+                if isinstance(obj['automation'], str) and 'automation_attrib' not in obj:
+                    # add '_attrib' to exist data
+                    obj['automation_attrib'] = obj['automation']
+                obj['automation'] = [{'name': 'Auto', 'temperature-level': '21'}]
+        # если automation не существует - создаем
+        else:
+            obj['automation'] = [{'name': 'Auto', 'temperature-level': '21'}]
+        self.write()
+        time.sleep(1)
+        return True
