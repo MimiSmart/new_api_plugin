@@ -8,7 +8,7 @@ After=multi-user.target
 
 Type=idle
 # Nice=1
-ExecStart=/home/sh2/exe/new_api_plugin/main.py
+ExecStart=/home/sh2/exe/new_api_plugin/new_api_plugin
 Environment=PYTHONUNBUFFERED=1
 
 [Install]
