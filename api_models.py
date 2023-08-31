@@ -37,3 +37,8 @@ class SendMessage(BaseModel):
     addr: str = Field(title="Address of device, which push-message will be sent")
     message_type: int = Field(title="Type of push-message")
     message: str = Field(title="Message text")
+
+
+class GetToken(BaseModel):
+    username: str
+    password: str

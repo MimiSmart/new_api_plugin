@@ -622,6 +622,65 @@
           "required": true
         }
       }
+    },
+    "auth": {
+      "post": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Authorization",
+        "operationId": "auth",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Auth"
+              },
+              "examples": {
+                "auth": {
+                  "summary": "Auth",
+                  "description": "Example authorization",
+                  "value": {
+                    "command": "auth",
+                    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwOTg3NjU0MzIxMDk4NzY1IiwiZXhwIjoxNjkzNzI4NTAxfQ.ktQpol8VJFJnaMZSHtKD71wMEB-fEr8KpnzJbSPUG3k"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "get_token": {
+      "get": {
+        "tags": [
+          "ws api"
+        ],
+        "summary": "Get JWT for authorization",
+        "operationId": "get_token",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WsGetToken",
+                "examples": {
+                  "get_token": {
+                    "summary": "Get token",
+                    "description": "Example get token",
+                    "value": {
+                      "command": "get_token",
+                      "username": "mimismart",
+                      "password": "1234123412341234"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        }
+      }
     }
   },
   "schemas": {
@@ -899,6 +958,47 @@
               }
             }
           ]
+        }
+      }
+    },
+    "WsGetToken": {
+      "title": "Websocket get JWT",
+      "required": [
+        "command",
+        "username",
+        "password"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "username": {
+          "title": "Name of user",
+          "type": "string"
+        },
+        "password": {
+          "title": "Password",
+          "type": "string"
+        }
+      }
+    },
+    "Auth": {
+      "title": "Websocket authorization",
+      "required": [
+        "command",
+        "access_token"
+      ],
+      "type": "object",
+      "properties": {
+        "command": {
+          "title": "Command for execute (input name function)",
+          "type": "string"
+        },
+        "access_token": {
+          "title": "access token",
+          "type": "string"
         }
       }
     }

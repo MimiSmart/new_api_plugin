@@ -181,7 +181,7 @@ def send_message(current_user: Annotated[auth.User, Depends(auth.get_current_use
         return convert2response({"type": "error", "message": "Invalid data"})
 
 
-@app.post("/token", response_model=auth.Token)
+@app.post("/token", response_model=auth.Token, tags=['rest api'], summary="Get access token", )
 async def login_for_access_token(
         form_data: Annotated[OAuth2PasswordRequestForm, Depends()]
 ):
