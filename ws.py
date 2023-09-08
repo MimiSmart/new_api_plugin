@@ -57,6 +57,14 @@ def get_all_states(args):
 
 def set_state(args):
     try:
+
+        if 'state' not in args:
+            return {"type": "error", "message": "'state' is a required field"}
+        if 'addr' not in args:
+            return {"type": "error", "message": "'addr' is a required field"}
+        if args['addr'] not in logic.items:
+            return {"type": "error", "message": f"{args['addr']} not found in logic"}
+
         # обработка строк, для set_state
         try:
             tmp = [int(args['state'][i:i + 2], 16) for i in
@@ -71,6 +79,9 @@ def set_state(args):
                 if tmp[0] in [0, 1]:
                     # set manual mode for heating
                     logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
+
+                    time.sleep(1.5)
+
                     # set state for heating
                     logic.set_queue.append((args['addr'], [tmp[0]]))
                 # always off
@@ -99,6 +110,7 @@ def set_state(args):
 
             logic.items[args['addr']].set_state(bytes(tmp))
             state = logic.items[args['addr']].get_state()
+            # на шторы не возвращааем статус
             if logic.items[args['addr']].type in ['blinds', 'jalousie', 'gate']:
                 # print('debug. blinds')
                 pass
@@ -488,8 +500,6 @@ async def endpoint(websocket: WebSocket):
                         cmd = data['command']
                         data.pop('command')
                         reply = commands[cmd](data)
-
-
                     elif subscribes[find_index(websocket)].authorized or not config['auth']:  # debug config auth
                         if data['command'] == 'subscribe' or data['command'] == 'unsubscribe':
                             reply = subscriber(find_index(websocket), data)

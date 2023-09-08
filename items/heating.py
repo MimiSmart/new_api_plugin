@@ -23,13 +23,17 @@ def preset(self, state):
             state[0] |= (state[5] + 2) << 4
         state.pop(-1)
     # from client
-    elif len(state) == 2:
+    elif len(state) <= 2:
         if self.state is None:
-            temp = state[1]
-            state = [state[0], 0, state[1], 0, 0]
-            # не менять состояние
-            if temp == 0xFF:
-                state[2] = 0
+            try:
+                temp = state[1]
+                state = [state[0], 0, state[1], 0, 0]
+                # не менять состояние
+                if temp == 0xFF:
+                    state[2] = 0
+            # если пришел 1 байт состояния
+            except:
+                state = [state[0], 0, 0, 0, 0]
 
             if not state[0]:
                 state[0] = 0
@@ -46,7 +50,11 @@ def preset(self, state):
                 state[0] = (state - 1) << 4
 
         else:
-            state = [state[0], self.state[1], state[1], self.state[3], self.state[4]]
+            try:
+                state = [state[0], self.state[1], state[1], self.state[3], self.state[4]]
+            # если пришел 1 байт состояния
+            except:
+                state = [state[0], self.state[1], self.state[2], self.state[3], self.state[4]]
             # не менять состояние
             if state[2] == 0xFF:
                 state[2] = self.state[2]

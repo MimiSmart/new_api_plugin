@@ -92,6 +92,10 @@ def get_all_states(current_user: Annotated[auth.User, Depends(auth.get_current_u
 @app.post("/item/set_state/", tags=['rest api'], summary="Set state on item")
 def set_state(current_user: Annotated[auth.User, Depends(auth.get_current_user)], item: SetState):
     try:
+
+        if item.addr not in logic.items:
+            return convert2response({"type": "error", "message": f"{item.addr} not found in logic"})
+
         # обработка строк, для set_state
         try:
             tmp = [int(item.state[i:i + 2], 16) for i in
