@@ -28,12 +28,12 @@ def convert2response(msg):
                         headers={'Access-Control-Allow-Origin': '*'})
 
 
-@app.get("/logic/get/xml", tags=['rest api'], summary="Get logic in xml")
+@app.post("/logic/get/xml", tags=['rest api'], summary="Get logic in xml")
 def get_logic_xml(current_user: Annotated[auth.User, Depends(auth.get_current_user)]):
     return convert2response(logic.get_xml())
 
 
-@app.get("/logic/get/obj", tags=['rest api'], summary="Get logic in json")
+@app.post("/logic/get/obj", tags=['rest api'], summary="Get logic in json")
 def get_logic_obj(current_user: Annotated[auth.User, Depends(auth.get_current_user)]):
     return convert2response(logic.get_dict())
 
@@ -47,7 +47,7 @@ def set_logic_xml(current_user: Annotated[auth.User, Depends(auth.get_current_us
     )
 
 
-@app.get("/item/get_attributes/{addr}", tags=['rest api'], response_model=dict,
+@app.post("/item/get_attributes/{addr}", tags=['rest api'], response_model=dict,
          response_description='Return dictionary of item attributes',
          summary="Get item if json format")
 def get_item(current_user: Annotated[auth.User, Depends(auth.get_current_user)], addr: str):
@@ -64,7 +64,7 @@ def set_item(current_user: Annotated[auth.User, Depends(auth.get_current_user)],
     return convert2response(logic.set_item(item.type, item.tag, item.area, item.data))
 
 
-@app.delete("/item/delete/{addr}", tags=['rest api'], summary="Delete item")
+@app.post("/item/delete/{addr}", tags=['rest api'], summary="Delete item")
 # def del_item(item: Annotated[DelItem, Body(example={"addr": "999:99"}, ),], ):
 def del_item(current_user: Annotated[auth.User, Depends(auth.get_current_user)], addr: str):
     return convert2response(logic.del_item(addr))
@@ -83,7 +83,7 @@ def get_state(current_user: Annotated[auth.User, Depends(auth.get_current_user)]
     return convert2response({'type': 'response', 'data': response})
 
 
-@app.get("/item/get_all_states/", tags=['rest api'], response_description='Return string of bytes state',
+@app.post("/item/get_all_states/", tags=['rest api'], response_description='Return string of bytes state',
          summary="Get all current states of item")
 def get_all_states(current_user: Annotated[auth.User, Depends(auth.get_current_user)]):
     return convert2response(logic.get_all_states())

@@ -1,9 +1,8 @@
 import time
 from typing import Union
 
-from items import blinds, conditioner, dimmer, heating, lamp, leak, rgb, sensor
-
 # for debug
+from items import blinds, conditioner, dimmer, heating, lamp, leak, rgb, sensor
 
 # for compiled version
 
@@ -15,10 +14,10 @@ from items import blinds, conditioner, dimmer, heating, lamp, leak, rgb, sensor
 # import leak
 # import rgb
 # import sensor
-
+# ------------------
 # import more_itertools
 # from timeit import timeit
-
+# ---------------------------
 # size states in old history:
 # 'lamp': 1,
 # 'script': 1,
@@ -140,6 +139,7 @@ class Item:
     # .hst structure:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
+
     def write_history(self):
         return False
         # def write(mode, time, state):
@@ -213,6 +213,7 @@ class Item:
     # .hst structure:
     # [start_timestamp][data_1min,data_2min, ... , data_Nmin]
     # if there was no data for some time - the next data will be written as a new block with a timestamp
+
     def read_history(self) -> Union[None, dict]:
         # global hst_path
         # if self.type in hst_supported_types:
@@ -297,6 +298,7 @@ class Item:
         return None
 
     # parse old history, .hst files
+
     def parse_hst(self, states):
         global item
         # switch пропускаю т.к. он стейт присылает только при нажатии и история, собираемая раз в минуту будет бесполезной
@@ -306,6 +308,7 @@ class Item:
         return split_states
 
     # parse new history, .hst2 files
+
     def parse_hst2(self, states):
         global item
         # switch пропускаю т.к. он стейт присылает только при нажатии и история, собираемая раз в минуту будет бесполезной

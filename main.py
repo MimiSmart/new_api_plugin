@@ -14,11 +14,12 @@ import ws
 from logic import Logic
 from shclient import SHClient
 
-config = None
+config = tools.read_config()
 threads = list()
 
 
 def server_run(host, port):
+    global config
     rest.app.add_api_websocket_route('/', ws.endpoint)
 
     # load ws schemas for openapi docs
@@ -29,11 +30,14 @@ def server_run(host, port):
             openapi['paths'][key] = value
         for key, value in tmp['schemas'].items():
             openapi['components']['schemas'][key] = value
-    uvicorn.run(rest.app, host=host, port=port, ws_per_message_deflate=False)
+    if config['https']:
+        uvicorn.run(rest.app, host=host, port=port, ws_per_message_deflate=False,
+                    ssl_keyfile=tools.home_path + 'ssl/key.pem', ssl_certfile=tools.home_path + 'ssl/cert.pem')
+    else:
+        uvicorn.run(rest.app, host=host, port=port, ws_per_message_deflate=False)
 
 
 def main():
-    config = tools.read_config()
     keys = tools.read_keys()
     for key in keys:
         if len(key) == 16:
