@@ -54,7 +54,7 @@ def preset(self, state):
                 state = [state[0], self.state[1], state[1], self.state[3], self.state[4]]
             # если пришел 1 байт состояния
             except:
-                state = [state[0], self.state[1], self.state[2], self.state[3], self.state[4]]
+                state = [state[0], *self.state[1:]]
             # не менять состояние
             if state[2] == 0xFF:
                 state[2] = self.state[2]
@@ -120,3 +120,12 @@ def parse_hst2(states):
     #     }
     #     for index in range(0, len(states), 6)]
     return split_states
+
+
+def fix_manual_heating(self):
+    try:
+        self.state[0] = 0
+        self.state[2] = 0x80
+    except:
+        self.state = [0, 0, 0x80, 0, 0]
+    return bytes(self.state)

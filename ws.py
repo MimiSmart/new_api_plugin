@@ -1,12 +1,14 @@
 import asyncio
 import json
 import time
+import traceback
 
 from fastapi import WebSocket, WebSocketDisconnect
 from fastapi.websockets import WebSocketState
 
 import tools
 from auth import Auth
+from items import heating
 from logic import Logic
 
 subscribes = list()
@@ -56,6 +58,7 @@ def get_all_states(args):
 
 
 def set_state(args):
+    global config
     try:
 
         if 'state' not in args:
@@ -80,10 +83,15 @@ def set_state(args):
                     # set manual mode for heating
                     logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:-4']))
 
-                    time.sleep(1.5)
+                    # условие поставлено для фикса бага на прошивке RHX
+                    if 'fix_manual_heating' in config and config['fix_manual_heating']:
+                        state = heating.fix_manual_heating(self=logic.items[args['addr']])
+                        return {"type": "response", "data": {args['addr']: list(state)}}
+                    else:
+                        time.sleep(1.5)
 
-                    # set state for heating
-                    logic.set_queue.append((args['addr'], [tmp[0]]))
+                        # set state for heating
+                        logic.set_queue.append((args['addr'], [tmp[0]]))
                 # always off
                 elif tmp[0] == 2:
                     # set always-off mode for heating
@@ -97,30 +105,27 @@ def set_state(args):
                     else:
                         logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0Auto']))
                     # set temperature for heating. if 0xFF, then save old temperature
-                    if tmp[1] != 0xFF:
+                    if len(tmp) > 1 and tmp[1] != 0xFF:
                         logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
                 # others automations (server2.0)
                 else:
                     logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0as:{tmp[0] - 3}']))
                     # set temperature for heating. if 0xFF, then save old temperature
-                    if tmp[1] != 0xFF:
+                    if len(tmp) > 1 and tmp[1] != 0xFF:
                         logic.set_queue.append(('1000:102', [ord(item) for item in f'{args["addr"]}\0ts:{tmp[1]}']))
             else:
                 logic.set_queue.append((args['addr'], tmp))
 
             logic.items[args['addr']].set_state(bytes(tmp))
             state = logic.items[args['addr']].get_state()
-            # на шторы не возвращааем статус
-            if logic.items[args['addr']].type in ['blinds', 'jalousie', 'gate']:
-                # print('debug. blinds')
-                pass
-            else:
+            # на шторы не возвращаем статус
+            if logic.items[args['addr']].type not in ['blinds', 'jalousie', 'gate']:
                 return {"type": "response", "data": {args['addr']: state}}
         else:
             logic.set_queue.append((args['addr'], tmp))
-    except:
+    except Exception as ex:
+        print(''.join(traceback.format_exception(etype=type(ex), value=ex, tb=ex.__traceback__)))
         return {"type": "error", "message": "Invalid data"}
-
 
 def get_history(args):
     # если история есть в .hst2 то берем оттуда

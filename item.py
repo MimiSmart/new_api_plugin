@@ -336,7 +336,10 @@ class Item:
         if self.size_state > 0 and len(state) <= self.size_state:
             if self.state is not None:
                 # если до этого статус был длиннее - остальное оставляем как было
-                self.state = state + self.state[len(state):]
+                try:
+                    self.state = state + self.state[len(state):]
+                except:
+                    pass
             else:
                 self.state = state
                 for x in range(self.size_state - len(state)):
@@ -346,8 +349,8 @@ class Item:
         elif len(state) > self.size_state:
             self.state = state[:self.size_state]
         else:
-            print(
-                f"Item set-state func.: Error set state! Addr:{self.addr}; Type: {self.type}; Size state: {self.size_state}; Settable state:{state}")
+            print(f"Item set-state func.: Error set state! Addr:{self.addr}; Type: {self.type}; "
+                  f"Size state: {self.size_state}; Settable state:{state}")
 
     def presetter(self, state):
         global item
